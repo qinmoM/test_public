@@ -32,7 +32,7 @@ import router from '../../router';
     margin: 0;
     padding: 0;
     width: 100%;
-    height: calc(100vh - 50px);
+    height: calc(100vh - 60px);
 }
 .nav{
     display: flex;
@@ -52,7 +52,12 @@ import router from '../../router';
     box-sizing: border-box;
     box-shadow: 1px 2px 5px rgba(0, 0, 0, 0.2);
 }
-
+.main-content{
+    margin: 0;
+    padding: 5px;
+    width: 100%;
+    height: 100%;
+}
 .nav-items:hover{
     background-color: chartreuse;
     box-shadow: 1px 2px 5px chartreuse;
