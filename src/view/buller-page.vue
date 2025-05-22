@@ -1,5 +1,7 @@
 <template>
-  <div class="page-content"></div>
+  <div class="page-content">
+
+  </div>
 </template>
 <script setup>
 import * as THREE from 'three'
@@ -115,8 +117,8 @@ onMounted(() => {
 </script>
 <style scoped>
 .page-content {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
 }
 canvas {
