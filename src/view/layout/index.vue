@@ -9,6 +9,7 @@
             <RouterLink to="/page3" class="nav-items">动量守恒</RouterLink>
             <RouterLink to="/buller-page" class="nav-items">冲量1--子弹射击木块</RouterLink>
             <RouterLink to="/test" class="nav-items">测试菜单项</RouterLink>
+            <RouterLink to="/page4" class="nav-items">反冲</RouterLink>
         </div>
         <div class="main-content"> 
             <router-view></router-view>
