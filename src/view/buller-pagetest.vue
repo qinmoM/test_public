@@ -532,7 +532,7 @@ html, body, #app {
 }
 
 .penetrated {
-  color: #e74c3c;
+  color: #e77c3c;
   font-weight: bold;
   animation: flash 0.5s;
 }
