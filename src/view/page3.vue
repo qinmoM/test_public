@@ -38,13 +38,49 @@ const sphereBody = new CANNON.Body({ //创建一个物体
 world.addBody(sphereBody) //把物体添加到物理世界中
 
 
-//创建一个立方体：创建物体的一般步骤，首先创建几何形状，规定物体的材质，再去创建物体，把几何形状和材质当作参数创建物体
-const geometry = new THREE.BoxGeometry(1,1,1);//创建几何体
-const material = new THREE.MeshBasicMaterial({color:0x00f00}) //创建材质
-const cube = new THREE.Mesh(geometry,material) //创建物体，形状和材质
-cube.position.set(0,0,0) //设置物体的位置
-scenc.add(cube) //把物体添加到场景中
 
+// 创建立方体
+        const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
+        const cubeMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x00aaff,
+            roughness: 0.1,
+            metalness: 0.5
+        });
+        const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        scene.add(cube);
+
+        // 创建凹陷的半球（用球体的上半部分）
+        const hemisphereGeometry = new THREE.SphereGeometry(0.8, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
+        const hemisphereMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffaa00,
+            side: THREE.BackSide // 内部可见
+        });
+        const hemisphere = new THREE.Mesh(hemisphereGeometry, hemisphereMaterial);
+        hemisphere.position.y = -0.5; // 调整位置使其凹陷
+        hemisphere.rotation.x = Math.PI; // 翻转半球使其朝内
+        cube.add(hemisphere); // 将半球作为立方体的子对象
+
+
+        //初始化小球的位置
+function initBall() {
+        ball.x = semicircle.centerX - semicircle.radius + ball.radius + 10;
+        ball.y = semicircle.centerY - Math.sqrt(Math.pow(semicircle.radius - ball.radius, 2) - 
+                      Math.pow(ball.x - semicircle.centerX, 2));
+        ball.velocityX = 0;
+        ball.velocityY = 0;
+        ball.angle = Math.PI;
+        ball.angularVelocity = 0;
+    }
+
+
+        // 显示信息
+        ctx.fillStyle = '#000';
+        ctx.font = '16px Arial';
+        ctx.fillText(`速度: ${Math.sqrt(ball.velocityX*ball.velocityX + ball.velocityY*ball.velocityY).toFixed(2)} m/s`, 20, 30);
+        ctx.fillText(`角速度: ${ball.angularVelocity.toFixed(4)} rad/s`, 20, 60);
+        ctx.fillText(`位置角度: ${ball.angle.toFixed(4)} rad`, 20, 90);
+    
+        
 function animate(){ //渲染函数
     world.step(1/60) //物理世界的步长，可以理解为物理世界的刷新频率
     requestAnimationFrame(animate) //请求动画帧
@@ -57,41 +93,7 @@ animate() //调用动画函数
 
 
 
-//初始化小球的位置
-function initBall() {
-        ball.x = semicircle.centerX - semicircle.radius + ball.radius + 10;
-        ball.y = semicircle.centerY - Math.sqrt(Math.pow(semicircle.radius - ball.radius, 2) - 
-                      Math.pow(ball.x - semicircle.centerX, 2));
-        ball.velocityX = 0;
-        ball.velocityY = 0;
-        ball.angle = Math.PI;
-        ball.angularVelocity = 0;
-    }
 
- // 绘制半圆
-        ctx.beginPath();
-        ctx.arc(semicircle.centerX, semicircle.centerY, semicircle.radius, 
-                semicircle.startAngle, semicircle.endAngle, true);
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = '#333';
-        ctx.stroke();
-        
-        // 绘制小球
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#3498db';
-        ctx.fill();
-        ctx.strokeStyle = '#2980b9';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        // 显示信息
-        ctx.fillStyle = '#000';
-        ctx.font = '16px Arial';
-        ctx.fillText(`速度: ${Math.sqrt(ball.velocityX*ball.velocityX + ball.velocityY*ball.velocityY).toFixed(2)} m/s`, 20, 30);
-        ctx.fillText(`角速度: ${ball.angularVelocity.toFixed(4)} rad/s`, 20, 60);
-        ctx.fillText(`位置角度: ${ball.angle.toFixed(4)} rad`, 20, 90);
-    
 </script>
 <style scoped>
 .page-content{
