@@ -55,6 +55,43 @@ function animate(){ //渲染函数
 animate() //调用动画函数
 })
 
+
+
+//初始化小球的位置
+function initBall() {
+        ball.x = semicircle.centerX - semicircle.radius + ball.radius + 10;
+        ball.y = semicircle.centerY - Math.sqrt(Math.pow(semicircle.radius - ball.radius, 2) - 
+                      Math.pow(ball.x - semicircle.centerX, 2));
+        ball.velocityX = 0;
+        ball.velocityY = 0;
+        ball.angle = Math.PI;
+        ball.angularVelocity = 0;
+    }
+
+ // 绘制半圆
+        ctx.beginPath();
+        ctx.arc(semicircle.centerX, semicircle.centerY, semicircle.radius, 
+                semicircle.startAngle, semicircle.endAngle, true);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#333';
+        ctx.stroke();
+        
+        // 绘制小球
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#3498db';
+        ctx.fill();
+        ctx.strokeStyle = '#2980b9';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // 显示信息
+        ctx.fillStyle = '#000';
+        ctx.font = '16px Arial';
+        ctx.fillText(`速度: ${Math.sqrt(ball.velocityX*ball.velocityX + ball.velocityY*ball.velocityY).toFixed(2)} m/s`, 20, 30);
+        ctx.fillText(`角速度: ${ball.angularVelocity.toFixed(4)} rad/s`, 20, 60);
+        ctx.fillText(`位置角度: ${ball.angle.toFixed(4)} rad`, 20, 90);
+    
 </script>
 <style scoped>
 .page-content{
