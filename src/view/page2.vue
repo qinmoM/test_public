@@ -11,14 +11,11 @@
       <button @click="toggleSimulation">
         {{ isRunning ? '暂停' : '开始' }}
       </button>
-   
-  
+
 </template>
 <script setup>
-import { onMounted } from 'vue';
-import * as CANNON from 'cannon-es'; //计算物理世界的坐标的
 import router from '../router';
-import * as THREE from "three"
+import * as THREE from 'three'
 
 export default {
   name: 'BallSimulator',
