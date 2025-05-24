@@ -157,9 +157,9 @@ function createBullet() {
         setTimeout(() => penetrated.value = false, 1000)
         
         const J = bulletMass * v_before
-        const deltaV = J / woodBody.mass
+        const deltaV = J / woodBody.mass//速度变化量
         woodBody.velocity.x += deltaV
-        bulletBody.velocity.x *= 0.85
+        bulletBody.velocity.x *= 0.85//保留85%的速度
         
         impulse.value = J
         energyLoss.value = 0.5 * bulletMass * v_before * v_before * 0.15
@@ -170,7 +170,7 @@ function createBullet() {
         // 未击穿
         const J = bulletMass * v_before
         const deltaV = J / woodBody.mass
-        woodBody.velocity.x += deltaV * restitutionMap[woodMaterial.value]
+        woodBody.velocity.x += deltaV * restitutionMap[woodMaterial.value]//弹性系数越大，木块的速度增量越大
         bulletBody.velocity.x = 0
         
         impulse.value = J * restitutionMap[woodMaterial.value]
@@ -445,8 +445,8 @@ html, body, #app {
 }
 
 .page-content {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   position: relative;
 }
