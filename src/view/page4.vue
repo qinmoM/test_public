@@ -1,10 +1,10 @@
 <template>
-  <!-- 容器元素绑定ref -->
-  <div ref="container" class="page-content"></div>
-  <!-- 操作按钮 -->
-  <div class="button-group">
-    <button @click="fire">开火</button>
-    <button @click="resetCamera">重置视角</button>
+  <div class="scene-container">
+    <div ref="container" class="three-scene"></div>
+    <div class="button-group">
+      <button @click="fire">开火</button>
+      <button @click="resetCamera">重置视角</button>
+    </div>
   </div>
 </template>
 
@@ -14,18 +14,27 @@ import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-//响应式数据
-const container = ref(null)          // 场景容器
-const animationId = ref(null)        // 动画ID
-const isRecoiling = ref(false)       // 是否正在后坐力动画
+// 响应式数据
+const container = ref(null)
+const animationId = ref(null)
+const isRecoiling = ref(false)
 
-//Three.js对象
+// Three.js对象
 let scene, camera, renderer, controls, weapon
 
-//场景初始化
-const initScene = () => {
-  if (!container.value) return
+// 调试立方体（测试用）
+const addDebugCube = () => {
+  const geometry = new THREE.BoxGeometry(1, 1, 1)
+  const material = new THREE.MeshBasicMaterial({ color: 0xff0000 })
+  const cube = new THREE.Mesh(geometry, material)
+  scene.add(cube)
+  console.log('调试立方体已添加')
+}
 
+// 场景初始化
+const initScene = () => {
+  console.log('初始化场景...')
+  
   // 1. 创建场景
   scene = new THREE.Scene()
   scene.background = new THREE.Color(0x222222)
@@ -37,14 +46,17 @@ const initScene = () => {
     0.1,
     1000
   )
-  camera.position.set(0,2,5)
-  resetCamera() // 初始化相机位置
+  resetCamera()
 
   // 3. 创建渲染器
-  renderer = new THREE.WebGLRenderer({ antialias: true })
+  renderer = new THREE.WebGLRenderer({ 
+    antialias: true,
+    alpha: true // 调试时透明背景
+  })
   renderer.setSize(container.value.clientWidth, container.value.clientHeight)
   renderer.setPixelRatio(window.devicePixelRatio)
   container.value.appendChild(renderer.domElement)
+  console.log('渲染器已创建', renderer.domElement)
 
   // 4. 添加轨道控制器
   controls = new OrbitControls(camera, renderer.domElement)
@@ -61,35 +73,67 @@ const initScene = () => {
   // 6. 创建物理世界
   const groundMaterial = new CANNON.Material('ground')
   const { world, boxBody } = createWorld(groundMaterial)
-  const contactMaterial = new CANNON.ContactMaterial(groundMaterial)
-  world.addContactMaterial(contactMaterial)
+  world.addContactMaterial(new CANNON.ContactMaterial(groundMaterial, groundMaterial))
 
-  // 7. 创建地面
-  const textureUrl = new URL('../assets/textures/laminate_floor_02_diff_4k.jpg', import.meta.url).href
-  const geometry = new THREE.BoxGeometry(15, 0.1, 15)
-  const texture = new THREE.TextureLoader().load(textureUrl)
-  const material = new THREE.MeshBasicMaterial({ map: texture })
-  const cube = new THREE.Mesh(geometry, material)
-  cube.position.copy(boxBody.position)
-  scene.add(cube)
+  // 7. 创建地面（带错误处理）
+  createGround().catch(console.error)
 
   // 8. 添加坐标轴辅助
-  const axesHelper = new THREE.AxesHelper(1)
+  const axesHelper = new THREE.AxesHelper(5) // 增大辅助线尺寸
   scene.add(axesHelper)
 
   // 9. 创建武器模型
   createWeaponModel()
 
+  // 调试：添加红色立方体
+  addDebugCube()
+
   // 10. 开始动画循环
   animate()
-}//物理世界创建
+}
+
+// 创建地面（带错误处理）
+const createGround = async () => {
+  try {
+    const geometry = new THREE.BoxGeometry(15, 0.1, 15)
+    const textureUrl = new URL('../assets/textures/laminate_floor_02_diff_4k.jpg', import.meta.url).href
+    
+    const texture = await new Promise((resolve, reject) => {
+      new THREE.TextureLoader().load(
+        textureUrl,
+        resolve,
+        undefined,
+        reject
+      )
+    })
+    
+    const material = new THREE.MeshBasicMaterial({ 
+      map: texture,
+      side: THREE.DoubleSide // 双面渲染
+    })
+    const cube = new THREE.Mesh(geometry, material)
+    cube.position.set(0, -0.05, 0)
+    scene.add(cube)
+    console.log('地面创建成功')
+  } catch (error) {
+    console.error('地面创建失败:', error)
+    // 回退方案：使用纯色地面
+    const geometry = new THREE.BoxGeometry(15, 0.1, 15)
+    const material = new THREE.MeshBasicMaterial({ color: 0x888888 })
+    const cube = new THREE.Mesh(geometry, material)
+    cube.position.set(0, -0.05, 0)
+    scene.add(cube)
+  }
+}
+
+// 物理世界创建
 const createWorld = (groundMaterial) => {
   const world = new CANNON.World()
   world.gravity.set(0, -9.82, 0)
   
   const groundShape = new CANNON.Box(new CANNON.Vec3(7.5, 0.05, 7.5))
   const boxBody = new CANNON.Body({
-    mass: 0,  // 质量为0表示静态物体
+    mass: 0,
     shape: groundShape,
     material: groundMaterial,
     position: new CANNON.Vec3(0, -0.05, 0)
@@ -99,20 +143,26 @@ const createWorld = (groundMaterial) => {
   return { world, boxBody }
 }
 
-//武器模型创建
+// 武器模型创建
 const createWeaponModel = () => {
   weapon = new THREE.Group()
-  
+  weapon.position.set(0, 0, 0) // 确保初始位置正确
   // 枪身
   const bodyGeometry = new THREE.BoxGeometry(1, 0.2, 0.1)
-  const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0x555555 })
+  const bodyMaterial = new THREE.MeshPhongMaterial({ 
+    color: 0x555555,
+    shininess: 30
+  })
   const body = new THREE.Mesh(bodyGeometry, bodyMaterial)
   weapon.add(body)
   
   // 枪管
   const barrelGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.8, 32)
-  barrelGeometry.rotateX(Math.PI / 2) // 旋转90度
-  const barrelMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 })
+  barrelGeometry.rotateX(Math.PI / 2)
+  const barrelMaterial = new THREE.MeshPhongMaterial({ 
+    color: 0x333333,
+    specular: 0x111111
+  })
   const barrel = new THREE.Mesh(barrelGeometry, barrelMaterial)
   barrel.position.set(0, 0, -0.4)
   weapon.add(barrel)
@@ -132,82 +182,85 @@ const createWeaponModel = () => {
   weapon.add(trigger)
   
   scene.add(weapon)
+  console.log('武器模型已创建', weapon)
 }
 
-//开火功能 
+// 开火功能
 const fire = () => {
-  if (isRecoiling.value) return
-  recoilAnimation()
+  if (isRecoiling.value || !weapon) return
+  isRecoiling.value = true
   
-  // 枪口闪光效果
-  const flashGeometry = new THREE.SphereGeometry(0.1, 16, 16)
-  const flashMaterial = new THREE.MeshBasicMaterial({
+  // 枪口闪光
+  const flash = createMuzzleFlash()
+  weapon.add(flash)
+  
+  // 后坐力动画
+  recoilAnimation(() => {
+    weapon.remove(flash)
+    isRecoiling.value = false
+  })
+}
+
+const createMuzzleFlash = () => {
+  const geometry = new THREE.SphereGeometry(0.1, 16, 16)
+  const material = new THREE.MeshBasicMaterial({
     color: 0xff6600,
     transparent: true,
     opacity: 0.8
   })
-  const flash = new THREE.Mesh(flashGeometry, flashMaterial)
+  const flash = new THREE.Mesh(geometry, material)
   flash.position.set(0, 0, -0.9)
-  weapon.add(flash)
-
-  // 50毫秒后移除闪光
-  setTimeout(() => {
-    weapon.remove(flash)
-  }, 50)
+  return flash
 }
 
-// 后坐力动画
-const recoilAnimation = () => {
-  if (!weapon) return
-  isRecoiling.value = true
-  const startTime = Date.now()
-  const duration = 200    // 动画持续时间(毫秒)
-  const recoilDistance = 0.2  // 后坐距离
+// 改进的后坐力动画
+const recoilAnimation = (onComplete) => {
+  const duration = 200
+  const distance = 0.2
+  let startTime = null
 
-  const animateRecoil = () => {
-    const elapsed = Date.now() - startTime
+  const animate = (timestamp) => {
+    if (!startTime) startTime = timestamp
+    const elapsed = timestamp - startTime
     const progress = Math.min(elapsed / duration, 1)
-    // 使用缓动函数使动画更平滑
-    const easeOut = 1 - Math.pow(1 - progress, 3)
+    
+    // 使用缓动函数
+    const ease = progress < 0.5 
+      ? 2 * progress * progress 
+      : 1 - Math.pow(-2 * progress + 2, 2) / 2
+    
+    weapon.position.z = progress < 0.5 
+      ? ease * distance 
+      : distance - (ease - 0.5) * 2 * distance
 
-    // 前半段：后坐
-    if (progress < 0.5) {
-      weapon.position.z = easeOut * recoilDistance
-    } 
-    // 后半段：复位
-    else {
-      weapon.position.z = recoilDistance - (easeOut - 0.5) * 2 * recoilDistance
-    }
-    
-    // 动画结束
-    if (progress >= 1) {
+    if (progress < 1) {
+      animationId.value = requestAnimationFrame(animate)
+    } else {
       weapon.position.z = 0
-      isRecoiling.value = false
-      return
+      onComplete?.()
     }
-    
-    animationId.value = requestAnimationFrame(animateRecoil)
   }
   
-  animateRecoil()
+  animationId.value = requestAnimationFrame(animate)
 }
 
 // 重置相机
 const resetCamera = () => {
   if (!camera || !controls) return
-  camera.position.set(0, 0.5, 2)
+  camera.position.set(0, 1.5, 3) // 调整到更好的观察位置
   controls.target.set(0, 0, 0)
   controls.update()
+  console.log('相机已重置', camera.position)
 }
 
-//  动画循环 
+// 动画循环
 const animate = () => {
   animationId.value = requestAnimationFrame(animate)
-  controls.update()  // 更新控制器
+  controls.update()
   renderer.render(scene, camera)
 }
 
-//窗口大小调整 
+// 窗口大小调整
 const onWindowResize = () => {
   if (!container.value || !camera || !renderer) return
   camera.aspect = container.value.clientWidth / container.value.clientHeight
@@ -215,12 +268,17 @@ const onWindowResize = () => {
   renderer.setSize(container.value.clientWidth, container.value.clientHeight)
 }
 
-//生命周期钩子
+// 生命周期
+onMounted(() => {
+  if (!container.value) {
+    console.error('容器元素未找到!')
+    return
+  }
   initScene()
   window.addEventListener('resize', onWindowResize)
+})
 
 onBeforeUnmount(() => {
-  // 清理资源
   window.removeEventListener('resize', onWindowResize)
   cancelAnimationFrame(animationId.value)
   if (container.value && renderer?.domElement) {
@@ -230,39 +288,53 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.page-content {
+.scene-container {
   display: flex;
-  justify-content: center;
-  align-items: center;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.three-scene {
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  display: block;
 }
-.button-group{
-  position:absolute;
-  bottom: 20px;
-  left:50%;
-  transform:translateX(-50%);
-  display:flex;
-  gap:10px;
+
+.button-group {
+  position: absolute;
+  top: 80px;
+  left: 55%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  gap: 15px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
 }
+
 button {
-  padding: 8px 16px;
-  margin: 0 10px;
+  padding: 10px 20px;
   background-color: #4CAF50;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  min-width: 100px;
 }
 
 button:hover {
   background-color: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
 
-canvas {
-  width: 100%;
-  height: 100%;
-  background-color: aliceblue;
+button:active {
+  transform: translateY(0);
 }
 </style>

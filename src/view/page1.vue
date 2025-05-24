@@ -1,10 +1,5 @@
 <template>
     <div class="page-content"></div>
-    <!-- 操作按钮 -->
-  <div class="button-group">
-    <button @click="fire">测试1</button>
-    <button @click="resetCamera">测试2</button>
-  </div>
 </template>
 <script setup>
 import * as THREE from 'three';
@@ -150,28 +145,6 @@ function updatePosition(basicCir, phyCircle) {
     height: 100%;
     overflow: hidden;
 }
-.button-group{
-  left:50%;
-  
-  position:absolute;
-  width:100%;
-  padding :10px 0;
-  display:flex;
-  /* justift-content:center; */
-  transform:translateX(-50%);
-  gap:10px;
-  z-index: 100;
-}
-button {
-  padding: 8px 16px;
-  margin: 0 10px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
 canvas{
     width: 100%;
     height: 100%;
