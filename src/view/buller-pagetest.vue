@@ -5,7 +5,7 @@
       <h3>子弹控制</h3>
       <div class="control-item">
         <label>子弹速度：</label>
-        <input type="number" v-model.number="inputVelocity" min="1" max="200">
+        <input type="number" v-model.number="inputVelocity" min="1" max="500">
         <button @click="fireBullet">发射</button>
         <button @click="resetScene">重置场景</button>
       </div>
@@ -29,7 +29,7 @@
       </div>
       <div class="control-item">
         <label>倾斜角度：</label>
-        <input type="range" v-model.number="woodAngle" min="-45" max="45" step="5">
+        <input type="range" v-model.number="woodAngle" min="-180" max="180" step="1">
         <span>{{ woodAngle }}°</span>
       </div>
     </div>
@@ -64,7 +64,7 @@ import { onMounted, ref, watch, onBeforeUnmount } from 'vue'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 // 控制参数
-const inputVelocity = ref(40)
+const inputVelocity = ref(0)
 const woodMaterial = ref('wood')
 const woodAngle = ref(0)
 const frictionEnabled = ref(false)
@@ -110,7 +110,7 @@ function createBullet() {
     shape: new CANNON.Sphere(bulletRadius),
     position: new CANNON.Vec3(-5, 1, 0),
     velocity: new CANNON.Vec3(inputVelocity.value, 0, 0),
-    linearDamping: 0.01
+    linearDamping: 0.01 //线性阻尼，模拟空气阻力，防止速度无限增大
   })
   
   world.addBody(bulletBody)
