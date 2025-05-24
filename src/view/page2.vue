@@ -13,7 +13,7 @@
       </button>
 
 </template>
-<script setup>
+<script>
 import router from '../router';
 import * as THREE from 'three'
 
