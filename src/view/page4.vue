@@ -373,7 +373,6 @@ const onWindowResize = () => {
   camera.updateProjectionMatrix()
   renderer.setSize(container.value.clientWidth, container.value.clientHeight)
 }
-
 // 生命周期
 onMounted(() => {
   if (!container.value) {
