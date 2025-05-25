@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>多介质环境下的波反射与干涉</title>
+    <script src="../echarts.min.js"></script>
+    <style>
+        html,body{
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        .title{
+            position: absolute;
+            width: 100%;
+            height: 50px;
+            box-shadow: 1px 1px 5px #888;
+            text-align: center;
+            line-height: 50px;
+            font-size: 20px;
+            background-color: aliceblue;
+        }
+        .conetnt{
+            position: relative;
+            display: flex;
+            padding: 5px;
+            width: calc(100% - 300px);
+            height: 100%;
+            margin: 0;
+        }
+        #main {
+            width: 60%;
+            height: 100%;
+        }
+        .controls {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            margin: auto;
+            width: 100%;
+            height: calc(100% - 100px);
+            display: flex;
+        }
+        button {
+            padding: 5px 15px;
+            margin: 0 5px;
+        }
+        .param-control {
+            width: 300px;
+            box-shadow: 1px 1px 5px #888;
+            display: flex;
+            flex-direction: column;
+        }
+        .param-group {
+            margin: 0 15px;
+            text-align: left;
+        }
+        label {
+            display: inline-block;
+            width: 120px;
+            margin: 5px 0;
+        }
+        input[type="number"], input[type="range"] {
+            width: 80px;
+        }
+        .medium-indicator {
+            position: absolute;
+            top: 50px;
+            font-weight: bold;
+        }
+        #left-medium {
+            left: 200px;
+            color: #888;
+        }
+        #right-medium {
+            right: 50%;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">驻波模拟</div>
+    <div class="controls">
+        <div class="param-control">
+            <div class="param-group">
+                <h3>控制</h3>
+                <div style="width: 100%;display: flex;">
+                    <button id="playPause">暂停</button>
+                    <button id="reset">重置</button>
+                    <div>速度: <input type="range" id="speed" min="1" max="20" value="10"></div>
+                </div>
+            </div>
+            <div class="param-group">
+                <h3>左侧介质</h3>
+                <label>波速(v₁): <input type="number" id="leftSpeed" min="0.5" max="5" step="0.1" value="1"></label>
+                <label>波长(λ₁): <input type="number" id="leftWavelength" min="0.5" max="5" step="0.1" value="2"></label>
+                <label>振幅(A₁): <input type="number" id="leftAmplitude" min="0.1" max="5" step="0.1" value="2"></label>
+            </div>
+            <div class="param-group">
+                <h3>反射点设置</h3>
+                <label>位置(x): <input type="number" id="reflectionPoint" min="3" max="7" step="0.1" value="5"></label>
+                <label>反射系数: <input type="number" id="reflectionCoeff" min="0" max="1" step="0.1" value="1"></label>
+            </div>
+            <div class="param-group">
+                <h3>右侧介质</h3>
+                <label>波速(v₂): <input type="number" id="rightSpeed" min="0.5" max="5" step="0.1" value="0.5"></label>
+                <label>波长(λ₂): <input type="number" id="rightWavelength" min="0.5" max="5" step="0.1" value="1"></label>
+                <label>振幅(A₂): <input type="number" id="rightAmplitude" min="0.1" max="5" step="0.1" value="1"></label>
+            </div>
+        </div>
+        <div class="conetnt">
+            <div id="main"></div>
+            <div class="enery" style="width: 40%;height: 100%;border: 1px solid;">
+                <div id="">
+                    <h3>速度</h3>
+                </div>
+                <div id="magic">
+                    <h3>能量</h3>
+                </div>
+            </div>
+            <div id="left-medium" class="medium-indicator">左侧介质 (v₁=1.0)</div>
+            <div id="right-medium" class="medium-indicator">右侧介质 (v₂=0.5)</div>
+        </div>
+    </div>
+    <script>
+        // 初始化ECharts实例
+        var myChart = echarts.init(document.getElementById('main'));
+        
+        // 参数设置
+        var params = {
+            // 左侧介质参数
+            left: {
+                speed: 1.0,
+                wavelength: 2.0,
+                amplitude: 2.0,
+                frequency: 0.5  // 由speed/wavelength计算
+            },
+            // 右侧介质参数
+            right: {
+                speed: 0.5,
+                wavelength: 1.0,
+                amplitude: 1.0,
+                frequency: 0.5  // 由speed/wavelength计算
+            },
+            reflectionPoint: 5.0,
+            reflectionCoeff: 1.0, // 反射系数(0-1)
+            time: 0,
+            isPlaying: true,
+            speed: 10
+        };
+        
+        // 计算频率
+        function calculateFrequencies() {
+            params.left.frequency = params.left.speed / params.left.wavelength;
+            params.right.frequency = params.right.speed / params.right.wavelength;
+        }
+        
+        // 生成原始波数据(左侧介质中的波)
+        function generateOriginalWave() {
+            var data = [];
+            var points = 300;
+            var maxX = 10;
+            
+            // 波前位置
+            var waveFront = params.time * params.left.speed;
+            
+            for (var i = 0; i <= points; i++) {
+                var x = maxX * i / points;
+                var y = 0;
+                
+                // 只在波前到达的区域显示波(波从左向右传播)
+                if (x <= waveFront && x <= params.reflectionPoint) {
+                    y = params.left.amplitude * Math.sin(
+                        2 * Math.PI * (x / params.left.wavelength - params.left.frequency * params.time)
+                    );
+                }
+                
+                data.push([x, y]);
+            }
+            
+            return data;
+        }
+        
+        // 生成反射波数据(左侧介质中的反射波)
+        function generateReflectedWave() {
+            var data = [];
+            var points = 300;
+            var maxX = 10;
+            
+            // 原始波到达反射点的时间
+            var arrivalTime = params.reflectionPoint / params.left.speed;
+            
+            // 反射波已经传播的时间
+            var reflectedTime = Math.max(0, params.time - arrivalTime);
+            
+            // 反射波前位置(从反射点向左传播)
+            var reflectedWaveFront = params.reflectionPoint - reflectedTime * params.left.speed;
+            
+            for (var i = 0; i <= points; i++) {
+                var x = maxX * i / points;
+                var y = 0;
+                
+                // 只在原始波到达反射点后才生成反射波
+                // 且只在反射波已经到达的区域显示
+                if (params.time >= arrivalTime && x >= reflectedWaveFront && x <= params.reflectionPoint) {
+                    // 反射波(向左传播)，考虑反射系数和半波损失(相位变化π)
+                    y = params.reflectionCoeff * params.left.amplitude * Math.sin(
+                        2 * Math.PI * (
+                            (params.reflectionPoint + (params.reflectionPoint - x)) / params.left.wavelength 
+                            - params.left.frequency * params.time
+                        ) + Math.PI
+                    );
+                }
+                
+                data.push([x, y]);
+            }
+            
+            return data;
+        }
+        
+        // 生成透射波数据(右侧介质中的透射波)
+        function generateTransmittedWave() {
+            var data = [];
+            var points = 300;
+            var maxX = 10;
+            
+            // 原始波到达反射点的时间
+            var arrivalTime = params.reflectionPoint / params.left.speed;
+            
+            // 透射波已经传播的时间
+            var transmittedTime = Math.max(0, params.time - arrivalTime);
+            
+            // 透射波前位置(从反射点向右传播)
+            var transmittedWaveFront = params.reflectionPoint + transmittedTime * params.right.speed;
+            
+            for (var i = 0; i <= points; i++) {
+                var x = maxX * i / points;
+                var y = 0;
+                
+                // 只在原始波到达反射点后才生成透射波
+                // 且只在透射波已经到达的区域显示
+                if (params.time >= arrivalTime && x >= params.reflectionPoint && x <= transmittedWaveFront) {
+                    // 透射波(向右传播)，考虑透射系数(1 - reflectionCoeff)
+                    y = (1 - params.reflectionCoeff) * params.right.amplitude * Math.sin(
+                        2 * Math.PI * (
+                            (x - params.reflectionPoint) / params.right.wavelength 
+                            - params.right.frequency * params.time
+                        )
+                    );
+                }
+                
+                data.push([x, y]);
+            }
+            
+            return data;
+        }
+        
+        // 生成合成波数据
+        function generateCombinedWave() {
+            var originalData = generateOriginalWave();
+            var reflectedData = generateReflectedWave();
+            var transmittedData = generateTransmittedWave();
+            var data = [];
+            
+            for (var i = 0; i < originalData.length; i++) {
+                var x = originalData[i][0];
+                var y = 0;
+                
+                // 左侧介质(原始波 + 反射波)
+                if (x <= params.reflectionPoint) {
+                    y = originalData[i][1] + reflectedData[i][1];
+                } 
+                // 右侧介质(透射波)
+                else {
+                    y = transmittedData[i][1];
+                }
+                
+                data.push([x, y]);
+            }
+            
+            return data;
+        }
+        
+        // 更新图表配置
+        function updateChart() {
+            calculateFrequencies();
+            
+            // 更新介质指示器
+            document.getElementById('left-medium').textContent = 
+                `左侧介质 (v₁=${params.left.speed.toFixed(1)}, λ₁=${params.left.wavelength.toFixed(1)})`;
+            document.getElementById('right-medium').textContent = 
+                `右侧介质 (v₂=${params.right.speed.toFixed(1)}, λ₂=${params.right.wavelength.toFixed(1)})`;
+            
+            // 原始波到达反射点的时间
+            var arrivalTime = params.reflectionPoint / params.left.speed;
+            
+            // 更新图表配置
+            var option = {
+                title: {
+                    text: '波图像',
+                    position: 'top',
+                    left: 'center',
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: function(tooltipParams) {
+                        var result = `时间: ${params.time.toFixed(2)}s<br/>`;
+                        tooltipParams.forEach(function(param) {
+                            result += `${param.seriesName}: ${param.value[1].toFixed(2)}<br/>`;
+                        });
+                        return result;
+                    }
+                },
+                legend: {
+                    data: ['合成波', '原始波', '反射波', '透射波'],
+                    top: '20',
+                    left: 'center',
+                },
+                xAxis: {
+                    name: '位置',
+                    type: 'value',
+                    min: 0,
+                    max: 10,
+                    axisLine: {onZero: true},
+                    splitLine: {
+                        lineStyle: {
+                            color: '#ddd',
+                            type: 'dashed'
+                        }
+                    }
+                },
+                yAxis: {
+                    name: '振幅',
+                    type: 'value',
+                    min: -Math.max(params.left.amplitude * (1 + params.reflectionCoeff), params.right.amplitude) * 1.2,
+                    max: Math.max(params.left.amplitude * (1 + params.reflectionCoeff), params.right.amplitude) * 1.2
+                },
+                series: [
+                    {
+                        name: '合成波',
+                        type: 'line',
+                        showSymbol: false,
+                        data: generateCombinedWave(),
+                        lineStyle: {
+                            width: 3,
+                            color: '#000'
+                        }
+                    },
+                    {
+                        name: '原始波',
+                        type: 'line',
+                        showSymbol: false,
+                        data: generateOriginalWave(),
+                        lineStyle: {
+                            width: 2,
+                            color: '#f00'
+                        }
+                    },
+                    {
+                        name: '反射波',
+                        type: 'line',
+                        showSymbol: false,
+                        data: generateReflectedWave(),
+                        lineStyle: {
+                            width: 2,
+                            color: '#00f'
+                        }
+                    },
+                    {
+                        name: '透射波',
+                        type: 'line',
+                        showSymbol: false,
+                        data: generateTransmittedWave(),
+                        lineStyle: {
+                            width: 2,
+                            color: '#0a0'
+                        }
+                    },
+                    {
+                        type: 'line',
+                        markLine: {
+                            silent: true,
+                            data: [
+                                {
+                                    yAxis: 0,
+                                    lineStyle: {
+                                        color: '#999',
+                                        type: 'dashed'
+                                    }
+                                }, 
+                                {
+                                    xAxis: params.reflectionPoint,
+                                    lineStyle: {
+                                        color: '#f60',
+                                        width: 2
+                                    },
+                                    label: {
+                                        position: 'start',
+                                        formatter: `反射点 x=${params.reflectionPoint.toFixed(1)}\n` +
+                                                   `反射系数: ${params.reflectionCoeff.toFixed(1)}`
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                animation: false,
+                graphic: getWaveFrontIndicators()
+            };
+            
+            myChart.setOption(option, true);
+        }
+        
+        // 获取波前指示器
+        function getWaveFrontIndicators() {
+            var arrivalTime = params.reflectionPoint / params.left.speed;
+            var indicators = [];
+            
+            // 原始波前指示器
+            var waveFront = params.time * params.left.speed;
+            if (waveFront < params.reflectionPoint) {
+                indicators.push({
+                    type: 'text',
+                    left: Math.min(waveFront / 10 * 100, (params.reflectionPoint/10*100)-5) + '%',
+                    top: '10%',
+                    style: {
+                        text: '原始波前→',
+                        fill: '#f00',
+                        fontSize: 14
+                    }
+                });
+            }
+            
+            // 反射波前指示器
+            if (params.time >= arrivalTime) {
+                var reflectedTime = params.time - arrivalTime;
+                var reflectedWaveFront = params.reflectionPoint - reflectedTime * params.left.speed;
+                
+                if (reflectedWaveFront > 0) {
+                    indicators.push({
+                        type: 'text',
+                        left: Math.max(reflectedWaveFront / 10 * 100, 5) + '%',
+                        top: '10%',
+                        style: {
+                            text: '←反射波前',
+                            fill: '#00f',
+                            fontSize: 14
+                        }
+                    });
+                }
+            }
+            
+            // 透射波前指示器
+            if (params.time >= arrivalTime) {
+                var transmittedTime = params.time - arrivalTime;
+                var transmittedWaveFront = params.reflectionPoint + transmittedTime * params.right.speed;
+                
+                if (transmittedWaveFront < 10) {
+                    indicators.push({
+                        type: 'text',
+                        left: Math.min(transmittedWaveFront / 10 * 100, 95) + '%',
+                        top: '10%',
+                        style: {
+                            text: '透射波前→',
+                            fill: '#0a0',
+                            fontSize: 14
+                        }
+                    });
+                }
+            }
+            
+            return indicators;
+        }
+        
+        // 初始化图表
+        calculateFrequencies();
+        updateChart();
+        
+        // 动画控制
+        var animationInterval = setInterval(updateAnimation, 50);
+        
+        function updateAnimation() {
+            if (!params.isPlaying) return;
+            
+            params.time += 0.05;
+            updateChart();
+        }
+        
+        // 控制按钮事件
+        document.getElementById('playPause').addEventListener('click', function() {
+            params.isPlaying = !params.isPlaying;
+            this.textContent = params.isPlaying ? '暂停' : '播放';
+        });
+        
+        document.getElementById('reset').addEventListener('click', function() {
+            params.time = 0;
+            updateChart();
+        });
+        
+        document.getElementById('speed').addEventListener('input', function() {
+            params.speed = parseFloat(this.value);
+        });
+        
+        // 左侧介质参数控制
+        document.getElementById('leftSpeed').addEventListener('input', function() {
+            params.left.speed = parseFloat(this.value);
+            calculateFrequencies();
+            updateChart();
+        });
+        
+        document.getElementById('leftWavelength').addEventListener('input', function() {
+            params.left.wavelength = parseFloat(this.value);
+            calculateFrequencies();
+            updateChart();
+        });
+        
+        document.getElementById('leftAmplitude').addEventListener('input', function() {
+            params.left.amplitude = parseFloat(this.value);
+            updateChart();
+        });
+        
+        // 反射点参数控制
+        document.getElementById('reflectionPoint').addEventListener('input', function() {
+            params.reflectionPoint = parseFloat(this.value);
+            updateChart();
+        });
+        
+        document.getElementById('reflectionCoeff').addEventListener('input', function() {
+            params.reflectionCoeff = parseFloat(this.value);
+            updateChart();
+        });
+        
+        // 右侧介质参数控制
+        document.getElementById('rightSpeed').addEventListener('input', function() {
+            params.right.speed = parseFloat(this.value);
+            calculateFrequencies();
+            updateChart();
+        });
+        
+        document.getElementById('rightWavelength').addEventListener('input', function() {
+            params.right.wavelength = parseFloat(this.value);
+            calculateFrequencies();
+            updateChart();
+        });
+        
+        document.getElementById('rightAmplitude').addEventListener('input', function() {
+            params.right.amplitude = parseFloat(this.value);
+            updateChart();
+        });
+        
+        // 响应窗口大小变化
+        window.addEventListener('resize', function() {
+            myChart.resize();
+        });
+    </script>
+</body>
+</html>
