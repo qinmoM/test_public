@@ -1,5 +1,6 @@
 <template>
   <div class="page-content" ref="container"></div>
+  
 </template>
 
 <script setup>
