@@ -95,7 +95,7 @@ const initScene = () => {
 // 创建地面（带错误处理）
 const createGround = async () => {
   try {
-    const geometry = new THREE.BoxGeometry(15, 0.1, 15)
+    const geometry = new THREE.BoxGeometry(15, 0.01, 15)
     const textureUrl = new URL('../assets/textures/laminate_floor_02_diff_4k.jpg', import.meta.url).href
     
     const texture = await new Promise((resolve, reject) => {
@@ -146,14 +146,15 @@ const createWorld = (groundMaterial) => {
 // 武器模型创建
 const createWeaponModel = () => {
   weapon = new THREE.Group()
-  weapon.position.set(0, 0, 0) // 确保初始位置正确
+  weapon.position.set(0, 0.15, 0) // 确保初始位置正确
   // 枪身
-  const bodyGeometry = new THREE.BoxGeometry(1, 0.2, 0.1)
+  const bodyGeometry = new THREE.BoxGeometry(1, 0.5, 0.1)
   const bodyMaterial = new THREE.MeshPhongMaterial({ 
     color: 0x555555,
-    shininess: 30
+    shininess: 100
   })
   const body = new THREE.Mesh(bodyGeometry, bodyMaterial)
+  body.position.y=0.1
   weapon.add(body)
   
   // 枪管
@@ -164,18 +165,18 @@ const createWeaponModel = () => {
     specular: 0x111111
   })
   const barrel = new THREE.Mesh(barrelGeometry, barrelMaterial)
-  barrel.position.set(0, 0, -0.4)
+  barrel.position.set(0, 0.1, -0.4)
   weapon.add(barrel)
   
   // 枪托
-  const stockGeometry = new THREE.BoxGeometry(0.3, 0.2, 0.4)
+  const stockGeometry = new THREE.BoxGeometry(0.3, 0.10, 0.4)
   const stockMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 })
   const stock = new THREE.Mesh(stockGeometry, stockMaterial)
-  stock.position.set(0, 0, 0.3)
+  stock.position.set(0, 0.1, 0.3)
   weapon.add(stock)
   
   // 扳机
-  const triggerGeometry = new THREE.BoxGeometry(0.1, 0.05, 0.05)
+  const triggerGeometry = new THREE.BoxGeometry(0.1, 0.10, 0.05)
   const triggerMaterial = new THREE.MeshPhongMaterial({ color: 0x222222 })
   const trigger = new THREE.Mesh(triggerGeometry, triggerMaterial)
   trigger.position.set(0, -0.1, 0.1)
@@ -189,7 +190,8 @@ const createWeaponModel = () => {
 const fire = () => {
   if (isRecoiling.value || !weapon) return
   isRecoiling.value = true
-  
+  //创建粒子火花
+  createMuzzleParticles()
   // 枪口闪光
   const flash = createMuzzleFlash()
   weapon.add(flash)
@@ -200,17 +202,121 @@ const fire = () => {
     isRecoiling.value = false
   })
 }
-
+// 修正后的枪口闪光（向前扩散）
 const createMuzzleFlash = () => {
-  const geometry = new THREE.SphereGeometry(0.1, 16, 16)
-  const material = new THREE.MeshBasicMaterial({
-    color: 0xff6600,
+  const group = new THREE.Group()
+  
+  // 核心闪光
+  const coreGeometry = new THREE.SphereGeometry(0.15, 16, 16)
+  const coreMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff4500,
     transparent: true,
-    opacity: 0.8
+    opacity: 0.9
   })
-  const flash = new THREE.Mesh(geometry, material)
-  flash.position.set(0, 0, -0.9)
-  return flash
+  const core = new THREE.Mesh(coreGeometry, coreMaterial)
+  
+  // 光晕
+  const haloGeometry = new THREE.PlaneGeometry(0.5, 0.5)
+  const haloMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff8c00,
+    transparent: true,
+    opacity: 0.7,
+    side: THREE.DoubleSide
+  })
+  const halo = new THREE.Mesh(haloGeometry, haloMaterial)
+  halo.rotation.x = Math.PI / 2
+  
+  group.add(core)
+  group.add(halo)
+  group.position.set(0, 0.1, -0.9) // 保持原始Y轴位置
+
+  // 闪光动画（只向前扩散）
+  let scale = 1
+  const animate = () => {
+    scale += 0.2
+    core.scale.set(scale, scale, scale)
+    halo.scale.set(scale * 2, scale * 2, 1)
+    core.material.opacity *= 0.9
+    halo.material.opacity *= 0.85
+    
+    // 轻微向前移动（Z轴负方向）
+    group.position.z -= 0.02
+    
+    if (core.material.opacity > 0.05) {
+      requestAnimationFrame(animate)
+    }
+  }
+  animate()
+  
+  return group
+}
+
+// 粒子效果（向前扩散）
+const createMuzzleParticles = () => {
+  const particles = new THREE.BufferGeometry()
+  const count = 50
+  const positions = new Float32Array(count * 3)
+  const colors = new Float32Array(count * 3)
+  
+  //更深的火焰色系
+  const fireColors=[
+    0xFF4500,//深红橙
+    0xFF6347,//番茄红
+    0xFF8C00 //深橙
+  ]
+  
+  for (let i = 0; i < count; i++) {
+    // 锥形向前分布
+    const angle = Math.random() * Math.PI * 2
+    const radius = Math.random() * 0.1
+    positions[i * 3] = Math.cos(angle) * radius
+    positions[i * 3 + 1] = Math.sin(angle) * radius // 移除*2，避免向上偏移
+    positions[i * 3 + 2] = -1 + Math.random() * -0.5
+    
+    // 从深色火焰色系中随机选择
+    const colorHex = fireColors[Math.floor(Math.random() * fireColors.length)]
+    const color = new THREE.Color(colorHex)
+    colors[i * 3] = color.r
+    colors[i * 3 + 1] = color.g
+    colors[i * 3 + 2] = color.b
+  }
+  
+  particles.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  particles.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+  
+  const particleMaterial = new THREE.PointsMaterial({
+    size: 0.05,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.8,
+    blending: THREE.AdditiveBlending
+  })
+  
+  const particleSystem = new THREE.Points(particles, particleMaterial)
+  particleSystem.position.set(0, 0.1, -0.9) // 保持原始Y轴位置
+  
+  // 粒子动画（只向前运动）
+  let life = 0
+  const maxLife = 30
+  const animate = () => {
+    life++
+    const positions = particles.attributes.position.array
+    
+    for (let i = 0; i < count; i++) {
+      positions[i * 3 + 2] -= 0.05  // 只向前移动
+    }
+    
+    particles.attributes.position.needsUpdate = true
+    
+    if (life < maxLife) {
+      requestAnimationFrame(animate)
+    } else {
+      weapon.remove(particleSystem)
+    }
+  }
+  
+  weapon.add(particleSystem)
+  animate()
 }
 
 // 改进的后坐力动画
