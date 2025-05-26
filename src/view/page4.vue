@@ -12,6 +12,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js'; //加载blender模型
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 // 响应式数据
@@ -145,45 +146,64 @@ const createWorld = (groundMaterial) => {
 
 // 武器模型创建
 const createWeaponModel = () => {
-  weapon = new THREE.Group()
-  weapon.position.set(0, 0.15, 0) // 确保初始位置正确
-  // 枪身
-  const bodyGeometry = new THREE.BoxGeometry(1, 0.5, 0.1)
-  const bodyMaterial = new THREE.MeshPhongMaterial({ 
-    color: 0x555555,
-    shininess: 100
-  })
-  const body = new THREE.Mesh(bodyGeometry, bodyMaterial)
-  body.position.y=0.1
-  weapon.add(body)
+  //加载blender模型
+const loader = new GLTFLoader();
+//加载模型
+loader.load(
+    new URL('../assets/model/Revolver_Wushu.gltf', import.meta.url).href, //模型的路径
+    (gltf) => { //加载成功的回调函数
+        console.log('Model loaded successfully');
+        weapon = gltf.scene; //获取模型
+        weapon.scale.set(5, 5, 5) //缩放模型
+        weapon.position.set(0, 1, 0) // 确保初始位置正确
+        // //旋转90
+        weapon.rotation.y = -Math.PI/2  // 绕X轴旋转90度
+        scene.add(weapon) //添加模型到场景中
+    },
+    undefined, //加载进度的回调函数
+    (error) => { //加载失败的回调函数
+        console.error('An error happened', error);
+    }
+)
+  // weapon = new THREE.Group()
+  // weapon.position.set(0, 1, 0) // 确保初始位置正确
+  // // 枪身
+  // const bodyGeometry = new THREE.BoxGeometry(1, 0.5, 0.1)
+  // const bodyMaterial = new THREE.MeshPhongMaterial({ 
+  //   color: 0x555555,
+  //   shininess: 100
+  // })
+  // const body = new THREE.Mesh(bodyGeometry, bodyMaterial)
+  // body.position.y=0.1
+  // weapon.add(body)
   
-  // 枪管
-  const barrelGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.8, 32)
-  barrelGeometry.rotateX(Math.PI / 2)
-  const barrelMaterial = new THREE.MeshPhongMaterial({ 
-    color: 0x333333,
-    specular: 0x111111
-  })
-  const barrel = new THREE.Mesh(barrelGeometry, barrelMaterial)
-  barrel.position.set(0, 0.1, -0.4)
-  weapon.add(barrel)
+  // // 枪管
+  // const barrelGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.8, 32)
+  // barrelGeometry.rotateX(Math.PI / 2)
+  // const barrelMaterial = new THREE.MeshPhongMaterial({ 
+  //   color: 0x333333,
+  //   specular: 0x111111
+  // })
+  // const barrel = new THREE.Mesh(barrelGeometry, barrelMaterial)
+  // barrel.position.set(0, 0.1, -0.4)
+  // weapon.add(barrel)
   
-  // 枪托
-  const stockGeometry = new THREE.BoxGeometry(0.3, 0.10, 0.4)
-  const stockMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 })
-  const stock = new THREE.Mesh(stockGeometry, stockMaterial)
-  stock.position.set(0, 0.1, 0.3)
-  weapon.add(stock)
+  // // 枪托
+  // const stockGeometry = new THREE.BoxGeometry(0.3, 0.10, 0.4)
+  // const stockMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 })
+  // const stock = new THREE.Mesh(stockGeometry, stockMaterial)
+  // stock.position.set(0, 0.1, 0.3)
+  // weapon.add(stock)
   
-  // 扳机
-  const triggerGeometry = new THREE.BoxGeometry(0.1, 0.10, 0.05)
-  const triggerMaterial = new THREE.MeshPhongMaterial({ color: 0x222222 })
-  const trigger = new THREE.Mesh(triggerGeometry, triggerMaterial)
-  trigger.position.set(0, -0.1, 0.1)
-  weapon.add(trigger)
+  // // 扳机
+  // const triggerGeometry = new THREE.BoxGeometry(0.1, 0.10, 0.05)
+  // const triggerMaterial = new THREE.MeshPhongMaterial({ color: 0x222222 })
+  // const trigger = new THREE.Mesh(triggerGeometry, triggerMaterial)
+  // trigger.position.set(0, -0.1, 0.1)
+  // weapon.add(trigger)
   
-  scene.add(weapon)
-  console.log('武器模型已创建', weapon)
+  // scene.add(weapon)
+  // console.log('武器模型已创建', weapon)
 }
 
 // 开火功能
@@ -224,7 +244,7 @@ const createMuzzleFlash = () => {
     side: THREE.DoubleSide
   })
   const halo = new THREE.Mesh(haloGeometry, haloMaterial)
-  halo.rotation.x = Math.PI / 2
+  // halo.rotation.x = Math.PI / 2
   
   group.add(core)
   group.add(halo)
@@ -254,7 +274,7 @@ const createMuzzleFlash = () => {
 // 粒子效果（向前扩散）
 const createMuzzleParticles = () => {
   const particles = new THREE.BufferGeometry()
-  const count = 50
+  const count = 1
   const positions = new Float32Array(count * 3)
   const colors = new Float32Array(count * 3)
   
