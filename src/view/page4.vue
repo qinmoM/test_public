@@ -47,7 +47,6 @@ const initScene = () => {
     0.1,
     1000
   )
-  resetCamera()
 
   // 3. 创建渲染器
   renderer = new THREE.WebGLRenderer({ 
@@ -63,6 +62,7 @@ const initScene = () => {
   controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
   controls.dampingFactor = 0.05
+  resetCamera()
 
   // 5. 添加光源
   const ambientLight = new THREE.AmbientLight(0x404040)
@@ -87,7 +87,7 @@ const initScene = () => {
   createWeaponModel()
 
   // 调试：添加红色立方体
-  addDebugCube()
+  // addDebugCube()
 
   // 10. 开始动画循环
   animate()
@@ -155,9 +155,11 @@ loader.load(
         console.log('Model loaded successfully');
         weapon = gltf.scene; //获取模型
         weapon.scale.set(5, 5, 5) //缩放模型
-        weapon.position.set(0, 1, 0) // 确保初始位置正确
+        //将模型沿y轴旋转180度
+        weapon.rotation.y = Math.PI // 绕Y轴旋转180度
+        weapon.position.set(5, 0.5, 0) // 确保初始位置正确
         // //旋转90
-        weapon.rotation.y = -Math.PI/2  // 绕X轴旋转90度
+        // weapon.rotation.y = -Math.PI/2  // 绕X轴旋转90度
         scene.add(weapon) //添加模型到场景中
     },
     undefined, //加载进度的回调函数
@@ -227,7 +229,7 @@ const createMuzzleFlash = () => {
   const group = new THREE.Group()
   
   // 核心闪光
-  const coreGeometry = new THREE.SphereGeometry(0.15, 16, 16)
+  const coreGeometry = new THREE.SphereGeometry(0.01, 0.1, 0.1)
   const coreMaterial = new THREE.MeshBasicMaterial({
     color: 0xff4500,
     transparent: true,
@@ -236,7 +238,7 @@ const createMuzzleFlash = () => {
   const core = new THREE.Mesh(coreGeometry, coreMaterial)
   
   // 光晕
-  const haloGeometry = new THREE.PlaneGeometry(0.5, 0.5)
+  const haloGeometry = new THREE.PlaneGeometry(0.1, 0.1)
   const haloMaterial = new THREE.MeshBasicMaterial({
     color: 0xff8c00,
     transparent: true,
@@ -244,11 +246,11 @@ const createMuzzleFlash = () => {
     side: THREE.DoubleSide
   })
   const halo = new THREE.Mesh(haloGeometry, haloMaterial)
-  // halo.rotation.x = Math.PI / 2
+  halo.rotation.x = Math.PI / 2
   
   group.add(core)
   group.add(halo)
-  group.position.set(0, 0.1, -0.9) // 保持原始Y轴位置
+  group.position.set(0.5, 0.1, 0) // 保持原始Y轴位置
 
   // 闪光动画（只向前扩散）
   let scale = 1
@@ -260,7 +262,7 @@ const createMuzzleFlash = () => {
     halo.material.opacity *= 0.85
     
     // 轻微向前移动（Z轴负方向）
-    group.position.z -= 0.02
+    group.position.x += 0.02
     
     if (core.material.opacity > 0.05) {
       requestAnimationFrame(animate)
@@ -291,7 +293,7 @@ const createMuzzleParticles = () => {
     const radius = Math.random() * 0.1
     positions[i * 3] = Math.cos(angle) * radius
     positions[i * 3 + 1] = Math.sin(angle) * radius // 移除*2，避免向上偏移
-    positions[i * 3 + 2] = -1 + Math.random() * -0.5
+    positions[i * 3 + 2] = 0 // 保持Z轴位置为0
     
     // 从深色火焰色系中随机选择
     const colorHex = fireColors[Math.floor(Math.random() * fireColors.length)]
@@ -313,7 +315,7 @@ const createMuzzleParticles = () => {
   })
   
   const particleSystem = new THREE.Points(particles, particleMaterial)
-  particleSystem.position.set(0, 0.1, -0.9) // 保持原始Y轴位置
+  particleSystem.position.set(0.5, 0.1, 0) // 保持原始Y轴位置
   
   // 粒子动画（只向前运动）
   let life = 0
@@ -323,7 +325,7 @@ const createMuzzleParticles = () => {
     const positions = particles.attributes.position.array
     
     for (let i = 0; i < count; i++) {
-      positions[i * 3 + 2] -= 0.05  // 只向前移动
+      positions[i * 3] += 0.05  // 只向前移动
     }
     
     particles.attributes.position.needsUpdate = true
@@ -373,7 +375,7 @@ const recoilAnimation = (onComplete) => {
 // 重置相机
 const resetCamera = () => {
   if (!camera || !controls) return
-  camera.position.set(0, 1.5, 3) // 调整到更好的观察位置
+  camera.position.set(0, 1.5, 6) // 调整到更好的观察位置
   controls.target.set(0, 0, 0)
   controls.update()
   console.log('相机已重置', camera.position)
