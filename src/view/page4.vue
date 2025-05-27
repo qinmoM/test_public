@@ -1,9 +1,23 @@
 <template>
   <div class="scene-container">
     <div ref="container" class="three-scene"></div>
-    <div class="button-group">
-      <button @click="fire">开火</button>
-      <button @click="resetCamera">重置视角</button>
+  </div>
+  <div class="control-panel">
+    <div class="control-group">
+      <h2>反冲模型</h2>
+      <div class="control-item">
+        <label>子弹速度：</label>
+        <input type="number" v-model.number="inputVelocity" min="1" max="500">
+        <button @click="fire">开火</button>
+        <button @click="resetCamera">重置视角</button>
+      </div>
+    </div>
+
+    <div class="data-display">
+      <h3>冲量数据</h3>
+      <p>子弹速度: {{ bulletSpeed.toFixed(2) }} m/s</p>
+      <p>冲量大小: {{ impulse.toFixed(2) }} N·s</p>
+      <p>能量损耗: {{ energyLoss.toFixed(2) }} J</p>
     </div>
   </div>
 </template>
@@ -19,18 +33,14 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 const container = ref(null)
 const animationId = ref(null)
 const isRecoiling = ref(false)
+const inputVelocity = ref(0)
 
+// 显示数据
+const bulletSpeed = ref(0)
+const impulse = ref(0)
+const energyLoss = ref(0)
 // Three.js对象
 let scene, camera, renderer, controls, weapon
-
-// 调试立方体（测试用）
-const addDebugCube = () => {
-  const geometry = new THREE.BoxGeometry(1, 1, 1)
-  const material = new THREE.MeshBasicMaterial({ color: 0xff0000 })
-  const cube = new THREE.Mesh(geometry, material)
-  scene.add(cube)
-  console.log('调试立方体已添加')
-}
 
 // 场景初始化
 const initScene = () => {
@@ -86,9 +96,6 @@ const initScene = () => {
   // 9. 创建武器模型
   createWeaponModel()
 
-  // 调试：添加红色立方体
-  // addDebugCube()
-
   // 10. 开始动画循环
   animate()
 }
@@ -97,21 +104,6 @@ const initScene = () => {
 const createGround = async () => {
   try {
     const geometry = new THREE.BoxGeometry(15, 0.01, 15)
-    const textureUrl = new URL('../assets/textures/laminate_floor_02_diff_4k.jpg', import.meta.url).href
-    
-    const texture = await new Promise((resolve, reject) => {
-      new THREE.TextureLoader().load(
-        textureUrl,
-        resolve,
-        undefined,
-        reject
-      )
-    })
-    
-    const material = new THREE.MeshBasicMaterial({ 
-      map: texture,
-      side: THREE.DoubleSide // 双面渲染
-    })
     const cube = new THREE.Mesh(geometry, material)
     cube.position.set(0, -0.05, 0)
     scene.add(cube)
@@ -157,7 +149,7 @@ loader.load(
         weapon.scale.set(5, 5, 5) //缩放模型
         //将模型沿y轴旋转180度
         weapon.rotation.y = Math.PI // 绕Y轴旋转180度
-        weapon.position.set(5, 0.5, 0) // 确保初始位置正确
+        weapon.position.set(2, 0.5, 0) // 确保初始位置正确
         // //旋转90
         // weapon.rotation.y = -Math.PI/2  // 绕X轴旋转90度
         scene.add(weapon) //添加模型到场景中
@@ -166,47 +158,7 @@ loader.load(
     (error) => { //加载失败的回调函数
         console.error('An error happened', error);
     }
-)
-  // weapon = new THREE.Group()
-  // weapon.position.set(0, 1, 0) // 确保初始位置正确
-  // // 枪身
-  // const bodyGeometry = new THREE.BoxGeometry(1, 0.5, 0.1)
-  // const bodyMaterial = new THREE.MeshPhongMaterial({ 
-  //   color: 0x555555,
-  //   shininess: 100
-  // })
-  // const body = new THREE.Mesh(bodyGeometry, bodyMaterial)
-  // body.position.y=0.1
-  // weapon.add(body)
-  
-  // // 枪管
-  // const barrelGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.8, 32)
-  // barrelGeometry.rotateX(Math.PI / 2)
-  // const barrelMaterial = new THREE.MeshPhongMaterial({ 
-  //   color: 0x333333,
-  //   specular: 0x111111
-  // })
-  // const barrel = new THREE.Mesh(barrelGeometry, barrelMaterial)
-  // barrel.position.set(0, 0.1, -0.4)
-  // weapon.add(barrel)
-  
-  // // 枪托
-  // const stockGeometry = new THREE.BoxGeometry(0.3, 0.10, 0.4)
-  // const stockMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 })
-  // const stock = new THREE.Mesh(stockGeometry, stockMaterial)
-  // stock.position.set(0, 0.1, 0.3)
-  // weapon.add(stock)
-  
-  // // 扳机
-  // const triggerGeometry = new THREE.BoxGeometry(0.1, 0.10, 0.05)
-  // const triggerMaterial = new THREE.MeshPhongMaterial({ color: 0x222222 })
-  // const trigger = new THREE.Mesh(triggerGeometry, triggerMaterial)
-  // trigger.position.set(0, -0.1, 0.1)
-  // weapon.add(trigger)
-  
-  // scene.add(weapon)
-  // console.log('武器模型已创建', weapon)
-}
+)}
 
 // 开火功能
 const fire = () => {
@@ -430,38 +382,82 @@ onBeforeUnmount(() => {
   display: block;
 }
 
-.button-group {
+.control-panel {
   position: absolute;
-  top: 80px;
-  left: 55%;
-  transform: translateX(-50%);
-  z-index: 100;
-  display: flex;
-  gap: 15px;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 8px;
+  top: 60px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  font-size: 14px;
+  max-width: 300px;
+  backdrop-filter: blur(5px);
 }
 
-button {
-  padding: 10px 20px;
-  background-color: #4CAF50;
+.control-group {
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.control-group h3 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.control-item {
+  display: flex;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.control-item label {
+  min-width: 80px;
+  margin-right: 10px;
+  font-weight: 500;
+}
+
+.control-item input[type="number"],
+.control-item select {
+  flex: 1;
+  margin: 0 8px;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.control-item button {
+  padding: 6px 12px;
+  margin-left: 8px;
+  background-color: #4a6baf;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s;
-  min-width: 100px;
+  transition: background-color 0.2s;
 }
 
-button:hover {
-  background-color: #45a049;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+.control-item button:hover {
+  background-color: #3a5a9f;
 }
 
-button:active {
-  transform: translateY(0);
+.data-display {
+  background: rgba(240, 240, 240, 0.7);
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.data-display h2 {
+  margin: 0 0 8px 0;
+  font-size: 15px;
+}
+
+.data-display p {
+  margin: 4px 0;
+  font-size: 13px;
 }
 </style>
