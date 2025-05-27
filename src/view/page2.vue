@@ -224,6 +224,74 @@ function resetSimulation() {
     setupScene();
     setupPhysics();
 }
+
+// 新增墙的材质和变量
+const wallMaterial = new CANNON.Material('wall');
+let leftWall, rightWall;
+let leftWallMesh, rightWallMesh;
+
+onMounted(() => {
+    // ... 保留之前的初始化代码 ...
+    setupScene();
+    setupPhysics();
+    setupWalls(); // 新增：设置墙壁
+    setupCameraAndControls();
+    animate();
+});
+
+function setupWalls() {
+    // 物理墙壁参数
+    const wallThickness = 0.5;
+    const wallHeight = 5;
+    const wallDepth = 15;
+    const wallOffset = 8; // 墙壁距离中心的偏移量
+
+    // 左侧墙物理体
+    leftWall = new CANNON.Body({
+        mass: 0, // 静态物体
+        shape: new CANNON.Box(new CANNON.Vec3(wallThickness, wallHeight, wallDepth)),
+        position: new CANNON.Vec3(-wallOffset - wallThickness, wallHeight, 0),
+        material: wallMaterial
+    });
+    world.addBody(leftWall);
+
+    // 右侧墙物理体
+    rightWall = new CANNON.Body({
+        mass: 0, // 静态物体
+        shape: new CANNON.Box(new CANNON.Vec3(wallThickness, wallHeight, wallDepth)),
+        position: new CANNON.Vec3(wallOffset + wallThickness, wallHeight, 0),
+        material: wallMaterial
+    });
+    world.addBody(rightWall);
+
+    // 墙壁接触材质
+    const wallContactMaterial = new CANNON.ContactMaterial(
+        wallMaterial,
+        sphereMaterial,
+        {
+            friction: 0,
+            restitution: 1 // 完全弹性碰撞
+        }
+    );
+    world.addContactMaterial(wallContactMaterial);
+
+    // 可视化墙壁
+    const wallGeometry = new THREE.BoxGeometry(wallThickness*2, wallHeight*2, wallDepth*2);
+    const wallTexture = new THREE.TextureLoader().load(textureUrl);
+    const wallMat = new THREE.MeshBasicMaterial({ 
+        map: wallTexture,
+        transparent: true,
+        opacity: 0.8
+    });
+
+    leftWallMesh = new THREE.Mesh(wallGeometry, wallMat);
+    leftWallMesh.position.copy(leftWall.position);
+    scene.add(leftWallMesh);
+
+    rightWallMesh = new THREE.Mesh(wallGeometry, wallMat);
+    rightWallMesh.position.copy(rightWall.position);
+    scene.add(rightWallMesh);
+}
 </script>
 
 <style scoped>
