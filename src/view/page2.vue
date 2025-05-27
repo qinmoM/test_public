@@ -1,33 +1,33 @@
 <template>
     <div class="page-content">
         <div class="control-panel">
-            <h3>Physics Controls</h3>
+            <h3>物理模拟控制</h3>
             <div class="control-group">
-                <label>Gravity:</label>
+                <label>重力加速度:</label>
                 <input type="range" v-model="gravity" min="0" max="20" step="0.1" @input="updateGravity">
-                <span>{{ gravity }}</span>
+                <span>{{ gravity }} m/s²</span>
             </div>
             <div class="control-group">
-                <label>Sphere 1 Mass:</label>
+                <label>小球1质量:</label>
                 <input type="range" v-model="sphere1Mass" min="0.1" max="10" step="0.1" @input="updatePhysics">
-                <span>{{ sphere1Mass }}</span>
+                <span>{{ sphere1Mass }} kg</span>
             </div>
             <div class="control-group">
-                <label>Sphere 1 Velocity:</label>
+                <label>小球1初速度:</label>
                 <input type="range" v-model="sphere1Velocity" min="-20" max="20" step="0.1" @input="updatePhysics">
-                <span>{{ sphere1Velocity }}</span>
+                <span>{{ sphere1Velocity }} m/s</span>
             </div>
             <div class="control-group">
-                <label>Sphere 2 Mass:</label>
+                <label>小球2质量:</label>
                 <input type="range" v-model="sphere2Mass" min="0.1" max="10" step="0.1" @input="updatePhysics">
-                <span>{{ sphere2Mass }}</span>
+                <span>{{ sphere2Mass }} kg</span>
             </div>
             <div class="control-group">
-                <label>Sphere 2 Velocity:</label>
+                <label>小球2初速度:</label>
                 <input type="range" v-model="sphere2Velocity" min="-20" max="20" step="0.1" @input="updatePhysics">
-                <span>{{ sphere2Velocity }}</span>
+                <span>{{ sphere2Velocity }} m/s</span>
             </div>
-            <button @click="resetSimulation">Reset Simulation</button>
+            <button @click="resetSimulation">重置模拟</button>
         </div>
     </div>
 </template>

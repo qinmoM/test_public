@@ -7,9 +7,15 @@
 
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as THREE from 'three'
+import * as CANNON from 'cannon-es'
 
 const container = ref(null)
 let renderer, camera, scene, animationId
+let world
+const balls = [] // 用于存储球的引用
+const strings = [] // 用于存储绳子的引用
+const ballbodies = [] // 用于存储球的物理体
+const stringbodies = [] // 用于存储绳子的物理体
 
 // 球坐标变量（用于控制相机）
 const spherical = new THREE.Spherical()
@@ -88,6 +94,22 @@ function onMouseUp() {
 
 onMounted(() => {
   const dom = container.value
+
+  // 物理世界场景
+  world = new CANNON.World()
+  world.gravity.set(0, -9.87, 0)// 设置重力
+
+  // 提前创建物理材质
+  const ballMat = new CANNON.Material('ballMaterial')
+  const floorMat = new CANNON.Material('floorMaterial')
+
+  // 定义接触属性
+  const contactMat = new CANNON.ContactMaterial(ballMat, floorMat, {
+    friction: 0.0,         // 无摩擦（防止球滚动）
+    restitution: 0.95      // 弹性很高
+  })
+  world.addContactMaterial(contactMat) // 加入世界中
+
   // 初始化渲染器
   renderer = new THREE.WebGLRenderer()
   renderer.setSize(dom.clientWidth, dom.clientHeight)
@@ -118,7 +140,7 @@ onMounted(() => {
   const barMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 })
   const bar = new THREE.Mesh(barGeometry, barMaterial)
   bar.position.set(0, 5, 0)
-//   scene.add(bar)
+  scene.add(bar)
 
   // 创建球的属性
   const ballRadius = 0.75// 半径
@@ -128,31 +150,41 @@ onMounted(() => {
   // 线的属性
   const stringMaterial = new THREE.MeshStandardMaterial({ color: 0x555555 })
 
-  // 创建一个组
-  const group1 = new THREE.Group();
-  group1.add(bar);
-
   const spacing = 1.5
   for (let i = 0; i < 5; i++) {
     const x = (i - 2) * spacing
 
-    // 球
+    // --- Three.js 球体 ---
     const ball = new THREE.Mesh(ballGeometry, ballMaterial)
     ball.position.set(x, 2, 0)
+    balls.push(ball) // 存储球的引用
+    scene.add(ball) // 将球添加到场景中
 
-    // 绳子（细长的圆柱体）
+      // --- Cannon.js 球体 ---
+    const ballMass = 1 // 球的质量
+    const ballShape = new CANNON.Sphere(ballRadius)
+    const ballBody = new CANNON.Body({
+      mass: ballMass,
+      shape: ballShape,
+      material: ballMat // ✨ 设置球的材质
+    })
+    ballBody.position.set(x, 2, 0)
+    world.addBody(ballBody)
+    ballbodies.push(ballBody)
+
+    // --- Three.js 绳子（细长的圆柱体） ---
     const stringHeight = 3
     const stringGeometry = new THREE.CylinderGeometry(0.03, 0.03, stringHeight)
     const string = new THREE.Mesh(stringGeometry, stringMaterial)
     string.position.set(x, 3.5, 0)
-    // scene.add(string)
+    strings.push(string) // 存储绳子的引用
+    scene.add(string) // 将绳子添加到场景中
 
-    // 加入组
-    group1.add(ball);
-    group1.add(string);
+    // --- Cannon.js 绳子 ---   
+    
   }
 
-    // ✅ 新增：添加一个地板
+    // 新增：添加一个地板
   const floorGeometry = new THREE.PlaneGeometry(100, 100) // 地板大小
   const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 })
   const floor = new THREE.Mesh(floorGeometry, floorMaterial)
@@ -160,7 +192,16 @@ onMounted(() => {
   floor.position.y = 0 // 地板高度（在 y=0 上）
   scene.add(floor)
 
-  scene.add(group1)
+  // --- Cannon.js 地板刚体 ---
+  const floorShape = new CANNON.Plane()
+  const floorBody = new CANNON.Body({
+    mass: 0,
+    shape: floorShape,
+    material: floorMat // ✨ 设置地板的材质
+  })
+  floorBody.addShape(floorShape)
+  floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0) // 旋转让法线朝上
+  world.addBody(floorBody)
 
   // 新增：绑定鼠标事件（只绑定在当前页面容器，不影响其他页面）
   dom.addEventListener('mousedown', onMouseDown)
@@ -168,6 +209,15 @@ onMounted(() => {
   dom.addEventListener('mousemove', onMouseMove)
 
   const animate = () => {
+  // 设置物理世界步长
+  world.step(1 / 60)
+
+  // 每一帧同步 cannon 球体 → three 球体
+  for (let i = 0; i < balls.length; i++) {
+    const cannonPos = ballbodies[i].position
+    balls[i].position.set(cannonPos.x, cannonPos.y, cannonPos.z)
+  }
+
     renderer.render(scene, camera)// 调用渲染器的渲染功能，渲染每一帧
     animationId = requestAnimationFrame(animate)
   }

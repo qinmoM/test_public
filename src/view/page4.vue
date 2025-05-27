@@ -1,9 +1,23 @@
 <template>
   <div class="scene-container">
     <div ref="container" class="three-scene"></div>
-    <div class="button-group">
-      <button @click="fire">开火</button>
-      <button @click="resetCamera">重置视角</button>
+  </div>
+  <div class="control-panel">
+    <div class="control-group">
+      <h2>反冲模型</h2>
+      <div class="control-item">
+        <label>子弹速度：</label>
+        <input type="number" v-model.number="inputVelocity" min="1" max="500">
+        <button @click="fire">开火</button>
+        <button @click="resetCamera">重置视角</button>
+      </div>
+    </div>
+
+    <div class="data-display">
+      <h3>冲量数据</h3>
+      <p>子弹速度: {{ bulletSpeed.toFixed(2) }} m/s</p>
+      <p>冲量大小: {{ impulse.toFixed(2) }} N·s</p>
+      <p>能量损耗: {{ energyLoss.toFixed(2) }} J</p>
     </div>
   </div>
 </template>
@@ -12,24 +26,21 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js'; //加载blender模型
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 // 响应式数据
 const container = ref(null)
 const animationId = ref(null)
 const isRecoiling = ref(false)
+const inputVelocity = ref(0)
 
+// 显示数据
+const bulletSpeed = ref(0)
+const impulse = ref(0)
+const energyLoss = ref(0)
 // Three.js对象
 let scene, camera, renderer, controls, weapon
-
-// 调试立方体（测试用）
-const addDebugCube = () => {
-  const geometry = new THREE.BoxGeometry(1, 1, 1)
-  const material = new THREE.MeshBasicMaterial({ color: 0xff0000 })
-  const cube = new THREE.Mesh(geometry, material)
-  scene.add(cube)
-  console.log('调试立方体已添加')
-}
 
 // 场景初始化
 const initScene = () => {
@@ -46,7 +57,6 @@ const initScene = () => {
     0.1,
     1000
   )
-  resetCamera()
 
   // 3. 创建渲染器
   renderer = new THREE.WebGLRenderer({ 
@@ -62,6 +72,7 @@ const initScene = () => {
   controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
   controls.dampingFactor = 0.05
+  resetCamera()
 
   // 5. 添加光源
   const ambientLight = new THREE.AmbientLight(0x404040)
@@ -85,9 +96,6 @@ const initScene = () => {
   // 9. 创建武器模型
   createWeaponModel()
 
-  // 调试：添加红色立方体
-  addDebugCube()
-
   // 10. 开始动画循环
   animate()
 }
@@ -95,22 +103,7 @@ const initScene = () => {
 // 创建地面（带错误处理）
 const createGround = async () => {
   try {
-    const geometry = new THREE.BoxGeometry(15, 0.1, 15)
-    const textureUrl = new URL('../assets/textures/laminate_floor_02_diff_4k.jpg', import.meta.url).href
-    
-    const texture = await new Promise((resolve, reject) => {
-      new THREE.TextureLoader().load(
-        textureUrl,
-        resolve,
-        undefined,
-        reject
-      )
-    })
-    
-    const material = new THREE.MeshBasicMaterial({ 
-      map: texture,
-      side: THREE.DoubleSide // 双面渲染
-    })
+    const geometry = new THREE.BoxGeometry(15, 0.01, 15)
     const cube = new THREE.Mesh(geometry, material)
     cube.position.set(0, -0.05, 0)
     scene.add(cube)
@@ -145,51 +138,34 @@ const createWorld = (groundMaterial) => {
 
 // 武器模型创建
 const createWeaponModel = () => {
-  weapon = new THREE.Group()
-  weapon.position.set(0, 0, 0) // 确保初始位置正确
-  // 枪身
-  const bodyGeometry = new THREE.BoxGeometry(1, 0.2, 0.1)
-  const bodyMaterial = new THREE.MeshPhongMaterial({ 
-    color: 0x555555,
-    shininess: 30
-  })
-  const body = new THREE.Mesh(bodyGeometry, bodyMaterial)
-  weapon.add(body)
-  
-  // 枪管
-  const barrelGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.8, 32)
-  barrelGeometry.rotateX(Math.PI / 2)
-  const barrelMaterial = new THREE.MeshPhongMaterial({ 
-    color: 0x333333,
-    specular: 0x111111
-  })
-  const barrel = new THREE.Mesh(barrelGeometry, barrelMaterial)
-  barrel.position.set(0, 0, -0.4)
-  weapon.add(barrel)
-  
-  // 枪托
-  const stockGeometry = new THREE.BoxGeometry(0.3, 0.2, 0.4)
-  const stockMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 })
-  const stock = new THREE.Mesh(stockGeometry, stockMaterial)
-  stock.position.set(0, 0, 0.3)
-  weapon.add(stock)
-  
-  // 扳机
-  const triggerGeometry = new THREE.BoxGeometry(0.1, 0.05, 0.05)
-  const triggerMaterial = new THREE.MeshPhongMaterial({ color: 0x222222 })
-  const trigger = new THREE.Mesh(triggerGeometry, triggerMaterial)
-  trigger.position.set(0, -0.1, 0.1)
-  weapon.add(trigger)
-  
-  scene.add(weapon)
-  console.log('武器模型已创建', weapon)
-}
+  //加载blender模型
+const loader = new GLTFLoader();
+//加载模型
+loader.load(
+    new URL('../assets/model/Revolver_Wushu.gltf', import.meta.url).href, //模型的路径
+    (gltf) => { //加载成功的回调函数
+        console.log('Model loaded successfully');
+        weapon = gltf.scene; //获取模型
+        weapon.scale.set(5, 5, 5) //缩放模型
+        //将模型沿y轴旋转180度
+        weapon.rotation.y = Math.PI // 绕Y轴旋转180度
+        weapon.position.set(2, 0.5, 0) // 确保初始位置正确
+        // //旋转90
+        // weapon.rotation.y = -Math.PI/2  // 绕X轴旋转90度
+        scene.add(weapon) //添加模型到场景中
+    },
+    undefined, //加载进度的回调函数
+    (error) => { //加载失败的回调函数
+        console.error('An error happened', error);
+    }
+)}
 
 // 开火功能
 const fire = () => {
   if (isRecoiling.value || !weapon) return
   isRecoiling.value = true
-  
+  //创建粒子火花
+  createMuzzleParticles()
   // 枪口闪光
   const flash = createMuzzleFlash()
   weapon.add(flash)
@@ -200,17 +176,121 @@ const fire = () => {
     isRecoiling.value = false
   })
 }
-
+// 修正后的枪口闪光（向前扩散）
 const createMuzzleFlash = () => {
-  const geometry = new THREE.SphereGeometry(0.1, 16, 16)
-  const material = new THREE.MeshBasicMaterial({
-    color: 0xff6600,
+  const group = new THREE.Group()
+  
+  // 核心闪光
+  const coreGeometry = new THREE.SphereGeometry(0.01, 0.1, 0.1)
+  const coreMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff4500,
     transparent: true,
-    opacity: 0.8
+    opacity: 0.9
   })
-  const flash = new THREE.Mesh(geometry, material)
-  flash.position.set(0, 0, -0.9)
-  return flash
+  const core = new THREE.Mesh(coreGeometry, coreMaterial)
+  
+  // 光晕
+  const haloGeometry = new THREE.PlaneGeometry(0.1, 0.1)
+  const haloMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff8c00,
+    transparent: true,
+    opacity: 0.7,
+    side: THREE.DoubleSide
+  })
+  const halo = new THREE.Mesh(haloGeometry, haloMaterial)
+  halo.rotation.x = Math.PI / 2
+  
+  group.add(core)
+  group.add(halo)
+  group.position.set(0.5, 0.1, 0) // 保持原始Y轴位置
+
+  // 闪光动画（只向前扩散）
+  let scale = 1
+  const animate = () => {
+    scale += 0.2
+    core.scale.set(scale, scale, scale)
+    halo.scale.set(scale * 2, scale * 2, 1)
+    core.material.opacity *= 0.9
+    halo.material.opacity *= 0.85
+    
+    // 轻微向前移动（Z轴负方向）
+    group.position.x += 0.02
+    
+    if (core.material.opacity > 0.05) {
+      requestAnimationFrame(animate)
+    }
+  }
+  animate()
+  
+  return group
+}
+
+// 粒子效果（向前扩散）
+const createMuzzleParticles = () => {
+  const particles = new THREE.BufferGeometry()
+  const count = 1
+  const positions = new Float32Array(count * 3)
+  const colors = new Float32Array(count * 3)
+  
+  //更深的火焰色系
+  const fireColors=[
+    0xFF4500,//深红橙
+    0xFF6347,//番茄红
+    0xFF8C00 //深橙
+  ]
+  
+  for (let i = 0; i < count; i++) {
+    // 锥形向前分布
+    const angle = Math.random() * Math.PI * 2
+    const radius = Math.random() * 0.1
+    positions[i * 3] = Math.cos(angle) * radius
+    positions[i * 3 + 1] = Math.sin(angle) * radius // 移除*2，避免向上偏移
+    positions[i * 3 + 2] = 0 // 保持Z轴位置为0
+    
+    // 从深色火焰色系中随机选择
+    const colorHex = fireColors[Math.floor(Math.random() * fireColors.length)]
+    const color = new THREE.Color(colorHex)
+    colors[i * 3] = color.r
+    colors[i * 3 + 1] = color.g
+    colors[i * 3 + 2] = color.b
+  }
+  
+  particles.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  particles.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+  
+  const particleMaterial = new THREE.PointsMaterial({
+    size: 0.05,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.8,
+    blending: THREE.AdditiveBlending
+  })
+  
+  const particleSystem = new THREE.Points(particles, particleMaterial)
+  particleSystem.position.set(0.5, 0.1, 0) // 保持原始Y轴位置
+  
+  // 粒子动画（只向前运动）
+  let life = 0
+  const maxLife = 30
+  const animate = () => {
+    life++
+    const positions = particles.attributes.position.array
+    
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] += 0.05  // 只向前移动
+    }
+    
+    particles.attributes.position.needsUpdate = true
+    
+    if (life < maxLife) {
+      requestAnimationFrame(animate)
+    } else {
+      weapon.remove(particleSystem)
+    }
+  }
+  
+  weapon.add(particleSystem)
+  animate()
 }
 
 // 改进的后坐力动画
@@ -247,7 +327,7 @@ const recoilAnimation = (onComplete) => {
 // 重置相机
 const resetCamera = () => {
   if (!camera || !controls) return
-  camera.position.set(0, 1.5, 3) // 调整到更好的观察位置
+  camera.position.set(0, 1.5, 6) // 调整到更好的观察位置
   controls.target.set(0, 0, 0)
   controls.update()
   console.log('相机已重置', camera.position)
@@ -267,7 +347,6 @@ const onWindowResize = () => {
   camera.updateProjectionMatrix()
   renderer.setSize(container.value.clientWidth, container.value.clientHeight)
 }
-
 // 生命周期
 onMounted(() => {
   if (!container.value) {
@@ -303,38 +382,82 @@ onBeforeUnmount(() => {
   display: block;
 }
 
-.button-group {
+.control-panel {
   position: absolute;
-  top: 80px;
-  left: 55%;
-  transform: translateX(-50%);
-  z-index: 100;
-  display: flex;
-  gap: 15px;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 8px;
+  top: 60px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  font-size: 14px;
+  max-width: 300px;
+  backdrop-filter: blur(5px);
 }
 
-button {
-  padding: 10px 20px;
-  background-color: #4CAF50;
+.control-group {
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.control-group h3 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.control-item {
+  display: flex;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.control-item label {
+  min-width: 80px;
+  margin-right: 10px;
+  font-weight: 500;
+}
+
+.control-item input[type="number"],
+.control-item select {
+  flex: 1;
+  margin: 0 8px;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.control-item button {
+  padding: 6px 12px;
+  margin-left: 8px;
+  background-color: #4a6baf;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s;
-  min-width: 100px;
+  transition: background-color 0.2s;
 }
 
-button:hover {
-  background-color: #45a049;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+.control-item button:hover {
+  background-color: #3a5a9f;
 }
 
-button:active {
-  transform: translateY(0);
+.data-display {
+  background: rgba(240, 240, 240, 0.7);
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.data-display h2 {
+  margin: 0 0 8px 0;
+  font-size: 15px;
+}
+
+.data-display p {
+  margin: 4px 0;
+  font-size: 13px;
 }
 </style>
