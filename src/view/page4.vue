@@ -32,15 +32,36 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 // 响应式数据
 const container = ref(null)
 const animationId = ref(null)
-const isRecoiling = ref(false)
-const inputVelocity = ref(0)
+const isRecoiling = ref(false)//是否处于后坐力状态
+const inputVelocity = ref(100)//输入速度
 
 // 显示数据
-const bulletSpeed = ref(0)
-const impulse = ref(0)
-const energyLoss = ref(0)
+const bulletSpeed = ref(0)//子弹速度
+const impulse = ref(0)//冲量 
+const energyLoss = ref(0)//能量损耗
+
+// 使用reactive管理物理数据
+const physicsData = reactive({
+  bulletSpeed: 0,
+  impulse: 0,
+  energyLoss: 0
+})
+
 // Three.js对象
 let scene, camera, renderer, controls, weapon
+
+// 计算物理数据
+const calculatePhysics = (velocity) => {
+  // 假设武器质量为5kg
+  const weaponMass = 5 
+  // 假设子弹质量为0.01kg
+  const bulletMass = 0.01 
+  
+  // 根据动量守恒定律计算
+  physicsData.bulletSpeed = velocity
+  physicsData.impulse = bulletMass * velocity
+  physicsData.energyLoss = 0.5 * bulletMass * velocity * velocity
+}
 
 // 场景初始化
 const initScene = () => {
@@ -164,6 +185,8 @@ loader.load(
 const fire = () => {
   if (isRecoiling.value || !weapon) return
   isRecoiling.value = true
+  // 计算物理数据
+  calculatePhysics(inputVelocity.value)
   //创建粒子火花
   createMuzzleParticles()
   // 枪口闪光
@@ -277,7 +300,8 @@ const createMuzzleParticles = () => {
     const positions = particles.attributes.position.array
     
     for (let i = 0; i < count; i++) {
-      positions[i * 3] += 0.05  // 只向前移动
+      // positions[i * 3] += 0.05  // 只向前移动
+      positions[i*3]+=(0.1-((0.1/maxLife)*life));
     }
     
     particles.attributes.position.needsUpdate = true
