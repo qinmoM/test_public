@@ -106,9 +106,16 @@ onMounted(() => {
   // 定义接触属性
   const contactMat = new CANNON.ContactMaterial(ballMat, floorMat, {
     friction: 0.0,         // 无摩擦（防止球滚动）
-    restitution: 0.95      // 弹性很高
+    restitution: 0.99      // 弹性很高
   })
   world.addContactMaterial(contactMat) // 加入世界中
+
+  // Ball 和 Ball 的接触属性
+  const ballBallContactMat = new CANNON.ContactMaterial(ballMat, ballMat, {
+    friction: 0.0,
+    restitution: 0.92
+  })
+  world.addContactMaterial(ballBallContactMat)
 
   // 初始化渲染器
   renderer = new THREE.WebGLRenderer()
@@ -168,9 +175,27 @@ onMounted(() => {
       shape: ballShape,
       material: ballMat // ✨ 设置球的材质
     })
+    // ballBody.angularDamping = 1.0 // 设置角阻尼，防止球体旋转
+    // ballBody.angularVelocity.set(0, 0, 0) // 设置初始角速度为0
     ballBody.position.set(x, 2, 0)
+    if (0 === i)
+    {
+      ballBody.position.set(-4.5, 0, 0)
+    }
     world.addBody(ballBody)
     ballbodies.push(ballBody)
+
+    // 加入球体在绳子上方的固定点
+    const fixedPointBody = new CANNON.Body({
+      mass: 0, // 不动
+      position: new CANNON.Vec3(x, 5, 0) // 固定点在绳子上方
+    })
+    world.addBody(fixedPointBody)
+
+      // 加绳长约束
+    const stringLength = 3 // 绳子的长度
+    const constraint = new CANNON.DistanceConstraint(ballBody, fixedPointBody, stringLength)
+    world.addConstraint(constraint)
 
     // --- Three.js 绳子（细长的圆柱体） ---
     const stringHeight = 3
@@ -210,12 +235,42 @@ onMounted(() => {
 
   const animate = () => {
   // 设置物理世界步长
-  world.step(1 / 60)
+  //world.step(1 / 90)
+  world.step(1/60, undefined, 20)  // 默认是10，提到20更稳定
 
   // 每一帧同步 cannon 球体 → three 球体
   for (let i = 0; i < balls.length; i++) {
+
+    // 获取当前球体的物理位置
+    ballbodies[i].position.z = 0; // 确保球体在 Z=0 平面上
     const cannonPos = ballbodies[i].position
+    const stringOriginX = (i - 2) * spacing
+    const stringOrigin = new THREE.Vector3(stringOriginX, 5, 0)
+    const ballPos = new THREE.Vector3(cannonPos.x, cannonPos.y, cannonPos.z)
+
+    // 如果球体速度过小，认为它静止了
+    const v = ballbodies[i].velocity // 球体速度
+    const isAlmostStill = v.length() < 0.2 // 速度小于0.05认为是静止的
+    const isNear = ballbodies[i].position.x - stringOriginX < 0.05 && ballbodies[i].position.x - stringOriginX > -0.05
+    if (isAlmostStill && isNear) {
+      ballbodies[i].velocity.set(0, 0, 0) // 停止球体运动
+    }
+
+    // 设置绳子的位置为中点
+    const midPoint = new THREE.Vector3().addVectors(stringOrigin, ballPos).multiplyScalar(0.5)
+    strings[i].position.copy(midPoint)
+
+    // 计算方向向量（从锚点指向球）
+    const dir = new THREE.Vector3().subVectors(ballPos, stringOrigin).normalize()
+
+    // 绳子默认方向是沿Y轴的（上→下），所以从 Y 轴 → dir
+    const up = new THREE.Vector3(0, -1, 0) // 因为 Cylinder 默认是从上到下（+Y 到 -Y）
+    const quat = new THREE.Quaternion().setFromUnitVectors(up, dir)
+    strings[i].quaternion.copy(quat)
+
+    // 更新 Three.js 球体位置
     balls[i].position.set(cannonPos.x, cannonPos.y, cannonPos.z)
+    strings[i].position.set((cannonPos.x + stringOriginX) / 2, cannonPos.y + 1.5, cannonPos.z) // 绳子位置在球上方
   }
 
     renderer.render(scene, camera)// 调用渲染器的渲染功能，渲染每一帧
