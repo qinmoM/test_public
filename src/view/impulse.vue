@@ -382,11 +382,54 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  // 1. 停止所有动画循环
+  if (animationId.value) {
+    cancelAnimationFrame(animationId.value);
+    animationId.value = null;
+  }
   window.removeEventListener('resize', onWindowResize)
   cancelAnimationFrame(animationId.value)
-  if (container.value && renderer?.domElement) {
-    container.value.removeChild(renderer.domElement)
+  //销毁渲染器
+  if(renderer){
+    // 强制释放WebGL上下文
+    renderer.dispose();
+    const context = renderer.getContext();
+    if (context && context.getExtension) {
+      const loseContext = context.getExtension('WEBGL_lose_context');
+      if (loseContext) loseContext.loseContext();
   }
+  // 3. 清理场景资源
+  if (scene) {
+    scene.traverse((obj) => {
+      if (obj.isMesh) {
+        // 释放几何体和材质
+        obj.geometry?.dispose();
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach(m => m.dispose());
+        } else {
+          obj.material?.dispose();
+        }
+        
+        // 释放纹理
+        if (obj.material?.map) obj.material.map.dispose();
+      }
+      
+      // 释放光源
+      if (obj.isLight) {
+        obj.dispose();
+      }
+    });
+    scene = null;
+  }
+
+  // 4. 销毁控制器
+  if (controls) {
+    controls.dispose();
+    controls = null;
+  }
+
+  // 5. 移除事件监听
+  window.removeEventListener('resize', onWindowResize);
 })
 </script>
 
