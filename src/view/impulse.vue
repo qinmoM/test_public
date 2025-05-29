@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, reactive } from 'vue'
 import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js'; //加载blender模型
@@ -397,6 +397,7 @@ onBeforeUnmount(() => {
     if (context && context.getExtension) {
       const loseContext = context.getExtension('WEBGL_lose_context');
       if (loseContext) loseContext.loseContext();
+  }
   }
   // 3. 清理场景资源
   if (scene) {
