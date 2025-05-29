@@ -113,7 +113,7 @@ onMounted(() => {
   // Ball 和 Ball 的接触属性
   const ballBallContactMat = new CANNON.ContactMaterial(ballMat, ballMat, {
     friction: 0.0,
-    restitution: 0.90
+    restitution: 0.92
   })
   world.addContactMaterial(ballBallContactMat)
 
@@ -236,14 +236,25 @@ onMounted(() => {
   const animate = () => {
   // 设置物理世界步长
   //world.step(1 / 90)
-  world.step(1/90, undefined, 20)  // 默认是10，提到20更稳定
+  world.step(1/60, undefined, 20)  // 默认是10，提到20更稳定
 
   // 每一帧同步 cannon 球体 → three 球体
   for (let i = 0; i < balls.length; i++) {
+
+    // 获取当前球体的物理位置
+    ballbodies[i].position.z = 0; // 确保球体在 Z=0 平面上
     const cannonPos = ballbodies[i].position
     const stringOriginX = (i - 2) * spacing
     const stringOrigin = new THREE.Vector3(stringOriginX, 5, 0)
     const ballPos = new THREE.Vector3(cannonPos.x, cannonPos.y, cannonPos.z)
+
+    // 如果球体速度过小，认为它静止了
+    const v = ballbodies[i].velocity // 球体速度
+    const isAlmostStill = v.length() < 0.2 // 速度小于0.05认为是静止的
+    const isNear = ballbodies[i].position.x - stringOriginX < 0.05 && ballbodies[i].position.x - stringOriginX > -0.05
+    if (isAlmostStill && isNear) {
+      ballbodies[i].velocity.set(0, 0, 0) // 停止球体运动
+    }
 
     // 设置绳子的位置为中点
     const midPoint = new THREE.Vector3().addVectors(stringOrigin, ballPos).multiplyScalar(0.5)
@@ -257,6 +268,7 @@ onMounted(() => {
     const quat = new THREE.Quaternion().setFromUnitVectors(up, dir)
     strings[i].quaternion.copy(quat)
 
+    // 更新 Three.js 球体位置
     balls[i].position.set(cannonPos.x, cannonPos.y, cannonPos.z)
     strings[i].position.set((cannonPos.x + stringOriginX) / 2, cannonPos.y + 1.5, cannonPos.z) // 绳子位置在球上方
   }
