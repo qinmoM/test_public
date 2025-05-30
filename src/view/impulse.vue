@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, reactive } from 'vue'
 import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js'; //加载blender模型
@@ -32,15 +32,36 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 // 响应式数据
 const container = ref(null)
 const animationId = ref(null)
-const isRecoiling = ref(false)
-const inputVelocity = ref(0)
+const isRecoiling = ref(false)//是否处于后坐力状态
+const inputVelocity = ref(100)//输入速度
 
 // 显示数据
-const bulletSpeed = ref(0)
-const impulse = ref(0)
-const energyLoss = ref(0)
+const bulletSpeed = ref(0)//子弹速度
+const impulse = ref(0)//冲量 
+const energyLoss = ref(0)//能量损耗
+
+// 使用reactive管理物理数据
+const physicsData = reactive({
+  bulletSpeed: 0,
+  impulse: 0,
+  energyLoss: 0
+})
+
 // Three.js对象
 let scene, camera, renderer, controls, weapon
+
+// 计算物理数据
+const calculatePhysics = (velocity) => {
+  // 假设武器质量为5kg
+  const weaponMass = 5 
+  // 假设子弹质量为0.01kg
+  const bulletMass = 0.01 
+  
+  // 根据动量守恒定律计算
+  physicsData.bulletSpeed = velocity
+  physicsData.impulse = bulletMass * velocity
+  physicsData.energyLoss = 0.5 * bulletMass * velocity * velocity
+}
 
 // 场景初始化
 const initScene = () => {
@@ -164,6 +185,8 @@ loader.load(
 const fire = () => {
   if (isRecoiling.value || !weapon) return
   isRecoiling.value = true
+  // 计算物理数据
+  calculatePhysics(inputVelocity.value)
   //创建粒子火花
   createMuzzleParticles()
   // 枪口闪光
@@ -277,7 +300,8 @@ const createMuzzleParticles = () => {
     const positions = particles.attributes.position.array
     
     for (let i = 0; i < count; i++) {
-      positions[i * 3] += 0.05  // 只向前移动
+      // positions[i * 3] += 0.05  // 只向前移动
+      positions[i*3]+=(0.1-((0.1/maxLife)*life));
     }
     
     particles.attributes.position.needsUpdate = true
@@ -358,11 +382,55 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  // 1. 停止所有动画循环
+  if (animationId.value) {
+    cancelAnimationFrame(animationId.value);
+    animationId.value = null;
+  }
   window.removeEventListener('resize', onWindowResize)
   cancelAnimationFrame(animationId.value)
-  if (container.value && renderer?.domElement) {
-    container.value.removeChild(renderer.domElement)
+  //销毁渲染器
+  if(renderer){
+    // 强制释放WebGL上下文
+    renderer.dispose();
+    const context = renderer.getContext();
+    if (context && context.getExtension) {
+      const loseContext = context.getExtension('WEBGL_lose_context');
+      if (loseContext) loseContext.loseContext();
   }
+  }
+  // 3. 清理场景资源
+  if (scene) {
+    scene.traverse((obj) => {
+      if (obj.isMesh) {
+        // 释放几何体和材质
+        obj.geometry?.dispose();
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach(m => m.dispose());
+        } else {
+          obj.material?.dispose();
+        }
+        
+        // 释放纹理
+        if (obj.material?.map) obj.material.map.dispose();
+      }
+      
+      // 释放光源
+      if (obj.isLight) {
+        obj.dispose();
+      }
+    });
+    scene = null;
+  }
+
+  // 4. 销毁控制器
+  if (controls) {
+    controls.dispose();
+    controls = null;
+  }
+
+  // 5. 移除事件监听
+  window.removeEventListener('resize', onWindowResize);
 })
 </script>
 
