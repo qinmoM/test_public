@@ -9,7 +9,7 @@
         <label>子弹速度：</label>
         <input type="number" v-model.number="inputVelocity" min="1" max="500">
         <button @click="fire">开火</button>
-        <button @click="resetCamera">重置视角</button>
+        <button @click="resetCamera">重置模型</button>
       </div>
     </div>
 
@@ -40,13 +40,6 @@ const bulletSpeed = ref(0)//子弹速度
 const impulse = ref(0)//冲量 
 const energyLoss = ref(0)//能量损耗
 
-// 使用reactive管理物理数据
-const physicsData = reactive({
-  bulletSpeed: 0,
-  impulse: 0,
-  energyLoss: 0
-})
-
 // Three.js对象
 let scene, camera, renderer, controls, weapon
 
@@ -56,11 +49,15 @@ const calculatePhysics = (velocity) => {
   const weaponMass = 5 
   // 假设子弹质量为0.01kg
   const bulletMass = 0.01 
-  
-  // 根据动量守恒定律计算
-  physicsData.bulletSpeed = velocity
-  physicsData.impulse = bulletMass * velocity
-  physicsData.energyLoss = 0.5 * bulletMass * velocity * velocity
+  bulletSpeed.value=velocity
+  impulse.value=bulletMass*velocity
+  energyLoss.value=0.5*bulletMass*velocity*velocity
+  根据动量守恒定律计算
+  console.log('物理参数更新',{
+    speed:bulletSpeed.value,
+    impulse: impulse.value,
+    energy: energyLoss.value
+  })
 }
 
 // 场景初始化
@@ -193,6 +190,16 @@ const fire = () => {
   const flash = createMuzzleFlash()
   weapon.add(flash)
   
+  recoilAnimation(()=>{
+    weapon.add(flash)
+    isRecoiling.value=false
+  })
+
+  console.log('开火数据',{
+    speed:bulletSpeed.value,
+    impulse: impulse.value,
+    energy: energyLoss.value
+  })
   // 后坐力动画
   recoilAnimation(() => {
     weapon.remove(flash)
@@ -348,13 +355,18 @@ const recoilAnimation = (onComplete) => {
   animationId.value = requestAnimationFrame(animate)
 }
 
-// 重置相机
+// 重置模型
 const resetCamera = () => {
   if (!camera || !controls) return
   camera.position.set(0, 1.5, 6) // 调整到更好的观察位置
   controls.target.set(0, 0, 0)
   controls.update()
   console.log('相机已重置', camera.position)
+  // 重置数据
+  bulletSpeed.value = 0
+  impulse.value = 0
+  energyLoss.value = 0
+  
 }
 
 // 动画循环
