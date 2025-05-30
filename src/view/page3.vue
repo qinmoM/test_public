@@ -124,7 +124,8 @@ onMounted(() => {
 
   // 初始化场景与相机
   scene = new THREE.Scene()
-  scene.background = new THREE.Color( 0x444444 )// 场景的背景颜色
+  //scene.background = new THREE.Color( 0x87ceeb )// 场景的背景颜色
+  scene.background = new THREE.Color( 0xadd8e6 )// 场景的背景颜色
   camera = new THREE.PerspectiveCamera(
     75,
     dom.clientWidth / dom.clientHeight,// 相机里的显示宽高为组件里的宽高
@@ -152,10 +153,14 @@ onMounted(() => {
   // 创建球的属性
   const ballRadius = 0.75// 半径
   const ballGeometry = new THREE.SphereGeometry(ballRadius, 32, 32)
-  const ballMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd })
+  const ballMaterial = new THREE.MeshStandardMaterial({
+    color: 0xededed, // 球的颜色
+    roughness: 0.3, // 粗糙度
+    metalness: 0.5
+  })
 
   // 线的属性
-  const stringMaterial = new THREE.MeshStandardMaterial({ color: 0x555555 })
+  const stringMaterial = new THREE.MeshStandardMaterial({ color: 0x555555})
 
   const spacing = 1.5
   for (let i = 0; i < 5; i++) {
@@ -211,7 +216,7 @@ onMounted(() => {
 
     // 新增：添加一个地板
   const floorGeometry = new THREE.PlaneGeometry(100, 100) // 地板大小
-  const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 })
+  const floorMaterial = new THREE.MeshStandardMaterial({ color: 0xeeeeee })
   const floor = new THREE.Mesh(floorGeometry, floorMaterial)
   floor.rotation.x = -Math.PI / 2 // 让地板水平
   floor.position.y = 0 // 地板高度（在 y=0 上）
