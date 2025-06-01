@@ -9,6 +9,8 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
 
+let step = 1 / 60// 设置步长变量
+let lastRefreshTime = 0// 时间变量：记录多久刷新
 let BallIndex = 1 // 当前球的数量索引
 const container = ref(null)
 let renderer, camera, scene, animationId
@@ -16,7 +18,6 @@ let world
 const balls = [] // 用于存储球的引用
 const strings = [] // 用于存储绳子的引用
 const ballbodies = [] // 用于存储球的物理体
-const stringbodies = [] // 用于存储绳子的物理体
 
 // 球坐标变量（用于控制相机）
 const spherical = new THREE.Spherical()
@@ -26,7 +27,24 @@ const cameraTarget = new THREE.Vector3(0, 3, 0) // 相机永远看向这个点
 let isDragging = false
 let previousMousePosition = { x: 0, y: 0 }
 
+// 刷新物体
+function refresh() {
+  let spacing = 1.5 // 球体之间的间距
+  for (let i = 0; i < balls.length; i++) {
+    const x = (i - 2) * spacing
+    ballbodies[i].velocity.set(0, 0, 0) // 停止球体运动
+    ballbodies[i].position.set(x, 2, 0) // 重置球体位置
+    if (BallIndex > i)
+    {
+      ballbodies[i].position.set(-4.1 + i * 1.5, 2.2, 0)
+    }
+  }
+}
+
+// 初始化物体
 function initObjects() {
+
+  lastRefreshTime = 0
 
   BallIndex = BallIndex + 1
   if (BallIndex >= 5) {
@@ -324,7 +342,12 @@ onMounted(() => {
   const animate = () => {
   // 设置物理世界步长
   //world.step(1 / 90)
-  world.step(1/60, undefined, 20)  // 默认是10，提到20更稳定
+  world.step(step, undefined, 20)  // 默认是10，提到20更稳定
+  lastRefreshTime += step
+  if (lastRefreshTime >= 3.6) {
+    lastRefreshTime = 0
+    refresh() // 刷新物体
+  }
 
   // 每一帧同步 cannon 球体 → three 球体
   for (let i = 0; i < balls.length; i++) {
