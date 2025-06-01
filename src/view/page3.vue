@@ -1,6 +1,6 @@
 <template>
   <div class="page-content" ref="container"></div>
-  
+  <button class="reset-button" @click="resetScene">切换</button>
 </template>
 
 <script setup>
@@ -9,6 +9,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
 
+let BallIndex = 1 // 当前球的数量索引
 const container = ref(null)
 let renderer, camera, scene, animationId
 let world
@@ -24,6 +25,88 @@ const cameraTarget = new THREE.Vector3(0, 3, 0) // 相机永远看向这个点
 // 鼠标相关变量
 let isDragging = false
 let previousMousePosition = { x: 0, y: 0 }
+
+function initObjects() {
+
+  BallIndex = BallIndex + 1
+  if (BallIndex >= 5) {
+    BallIndex = 1
+  }
+
+  const ballMat = new CANNON.Material('ballMaterial')
+  world.gravity.set(0, -9.8, 0)// 设置重力
+
+  // Ball 和 Ball 的接触属性
+  const ballBallContactMat = new CANNON.ContactMaterial(ballMat, ballMat, {
+    friction: 0.0,
+    restitution: 0.90
+  })
+  world.addContactMaterial(ballBallContactMat)
+
+  const ballRadius = 0.75
+  const ballGeometry = new THREE.SphereGeometry(ballRadius, 32, 32)
+  const ballMaterial = new THREE.MeshStandardMaterial({
+    color: 0xededed,
+    roughness: 0.3,
+    metalness: 0.5
+  })
+  const stringMaterial = new THREE.MeshStandardMaterial({ color: 0x555555 })
+  const spacing = 1.5
+
+  for (let i = 0; i < 5; i++) {
+    const x = (i - 2) * spacing
+
+    // 创建球
+    const ball = new THREE.Mesh(ballGeometry, ballMaterial)
+    ball.position.set(x, 2, 0)
+    balls.push(ball)
+    scene.add(ball)
+
+    const ballShape = new CANNON.Sphere(ballRadius)
+    const ballBody = new CANNON.Body({
+      mass: 1,
+      shape: ballShape,
+      material: ballMat // 设置球的材质
+    })
+    ballBody.position.set(x, 2, 0)
+    if (BallIndex > i)
+    {
+      ballBody.position.set(-4.1 + i * 1.5, 2.2, 0)
+    }
+    world.addBody(ballBody)
+    ballbodies.push(ballBody)
+    ballbodies[i].velocity.set(0, 0, 0) // 停止球体运动
+
+    const fixedPointBody = new CANNON.Body({ mass: 0, position: new CANNON.Vec3(x, 5, 0) })
+    world.addBody(fixedPointBody)
+
+    const constraint = new CANNON.DistanceConstraint(ballBody, fixedPointBody, 3)
+    world.addConstraint(constraint)
+
+    // 绳子
+    const stringGeometry = new THREE.CylinderGeometry(0.03, 0.03, 3)
+    const string = new THREE.Mesh(stringGeometry, stringMaterial)
+    strings.push(string)
+    scene.add(string)
+  }
+}
+
+function resetScene() {
+  // 清除 Three.js 物体
+  balls.forEach(ball => scene.remove(ball))
+  strings.forEach(string => scene.remove(string))
+  balls.length = 0
+  strings.length = 0
+
+  // 清除 Cannon.js 刚体
+  ballbodies.forEach(body => world.removeBody(body))
+  ballbodies.length = 0
+
+  // 不重建整个 world，只清除刚体即可
+
+  // 重新创建物体
+  initObjects()
+}
 
 // 鼠标按下时，标记拖动开始
  function onMouseDown(event) {
@@ -135,10 +218,10 @@ onMounted(() => {
   camera.position.set(0, 5, 8)// 相机位置
   camera.lookAt(0, 3, 0)// 相机看向的位置
 
-    // 初始化球坐标（相对于 cameraTarget）
+// 初始化球坐标（相对于 cameraTarget）
   spherical.setFromVector3(camera.position.clone().sub(cameraTarget))
 
-  // 添加光照
+// 添加光照
   const light = new THREE.DirectionalLight(0xffffff, 1)
   light.position.set(5, 10, 5)
   scene.add(light)
@@ -185,7 +268,7 @@ onMounted(() => {
     ballBody.position.set(x, 2, 0)
     if (0 === i)
     {
-      ballBody.position.set(-4.5, 0, 0)
+      ballBody.position.set(-4, 1.7, 0)
     }
     world.addBody(ballBody)
     ballbodies.push(ballBody)
@@ -255,7 +338,7 @@ onMounted(() => {
 
     // 如果球体速度过小，认为它静止了
     const v = ballbodies[i].velocity // 球体速度
-    const isAlmostStill = v.length() < 0.2 // 速度小于0.05认为是静止的
+    const isAlmostStill = v.length() < 0.3 // 速度小于0.2认为是静止的
     const isNear = ballbodies[i].position.x - stringOriginX < 0.05 && ballbodies[i].position.x - stringOriginX > -0.05
     if (isAlmostStill && isNear) {
       ballbodies[i].velocity.set(0, 0, 0) // 停止球体运动
@@ -306,5 +389,17 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   overflow: hidden;
+}
+.reset-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  padding: 8px 16px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 </style>
