@@ -52,7 +52,7 @@ const calculatePhysics = (velocity) => {
   bulletSpeed.value=velocity
   impulse.value=bulletMass*velocity
   energyLoss.value=0.5*bulletMass*velocity*velocity
-  根据动量守恒定律计算
+  //根据动量守恒定律计算
   console.log('物理参数更新',{
     speed:bulletSpeed.value,
     impulse: impulse.value,
