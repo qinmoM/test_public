@@ -1,6 +1,13 @@
 <template>
   <div class="page-content" ref="container"></div>
-  <button class="reset-button" @click="resetScene">切换</button>
+  <div class="control-panel">
+    <h3>牛顿摆模型</h3>
+    <div class="control-group">
+      <label>球数量:</label>
+      <span>{{ BallIndex }}</span>
+    </div>
+      <button class="reset-button" @click="resetScene">切换</button>
+  </div>
 </template>
 
 <script setup>
@@ -11,7 +18,7 @@ import * as CANNON from 'cannon-es'
 
 let step = 1 / 60// 设置步长变量
 let lastRefreshTime = 0// 时间变量：记录多久刷新
-let BallIndex = 1 // 当前球的数量索引
+let BallIndex = ref(1) // 当前球的数量索引
 const container = ref(null)
 let renderer, camera, scene, animationId
 let world
@@ -34,7 +41,7 @@ function refresh() {
     const x = (i - 2) * spacing
     ballbodies[i].velocity.set(0, 0, 0) // 停止球体运动
     ballbodies[i].position.set(x, 2, 0) // 重置球体位置
-    if (BallIndex > i)
+    if (BallIndex.value > i)
     {
       ballbodies[i].position.set(-4.1 + i * 1.5, 2.2, 0)
     }
@@ -46,9 +53,9 @@ function initObjects() {
 
   lastRefreshTime = 0
 
-  BallIndex = BallIndex + 1
-  if (BallIndex >= 5) {
-    BallIndex = 1
+  BallIndex.value += 1
+  if (BallIndex.value >= 5) {
+    BallIndex.value = 1
   }
 
   const ballMat = new CANNON.Material('ballMaterial')
@@ -87,7 +94,7 @@ function initObjects() {
       material: ballMat // 设置球的材质
     })
     ballBody.position.set(x, 2, 0)
-    if (BallIndex > i)
+    if (BallIndex.value > i)
     {
       ballBody.position.set(-4.1 + i * 1.5, 2.2, 0)
     }
@@ -408,18 +415,56 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+
 .page-content {
   width: 100%;
   height: 100%;
   overflow: hidden;
 }
-.reset-button {
+
+.control-panel {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 10;
-  padding: 8px 16px;
-  background-color: #4caf50;
+  top: 20px;
+  right: 20px;
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  max-width: 320px;
+  font-family: 'Segoe UI', sans-serif;
+  min-width: 260px;
+}
+
+.control-group {
+  margin-bottom: 10px;
+}
+
+.control-group label {
+  color: black;
+  min-width: 80px;
+  margin-right: 10px;
+  font-weight: 500;
+}
+
+.control-panel h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.control-group span {
+  color: black;
+  display: inline-block;
+  width: 40px;
+  text-align: right;
+  margin-left: 5px;
+}
+
+.reset-button {
+  margin-top: 10px;
+  padding: 5px 10px;
+  background: #4CAF50;
   color: white;
   border: none;
   border-radius: 4px;
