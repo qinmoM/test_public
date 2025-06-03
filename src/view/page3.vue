@@ -228,6 +228,8 @@ onMounted(() => {
   // 初始化渲染器
   renderer = new THREE.WebGLRenderer()
   renderer.setSize(dom.clientWidth, dom.clientHeight)
+  renderer.shadowMap.enabled = true
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap
   dom.appendChild(renderer.domElement)
 
   // 初始化场景与相机
@@ -249,6 +251,7 @@ onMounted(() => {
 // 添加光照
   const light = new THREE.DirectionalLight(0xffffff, 1)
   light.position.set(5, 10, 5)
+  light.castShadow = true
   scene.add(light)
 
 // 横梁
@@ -277,6 +280,7 @@ onMounted(() => {
     // --- Three.js 球体 ---
     const ball = new THREE.Mesh(ballGeometry, ballMaterial)
     ball.position.set(x, 2, 0)
+    ball.castShadow = true
     balls.push(ball) // 存储球的引用
     scene.add(ball) // 将球添加到场景中
 
@@ -328,6 +332,7 @@ onMounted(() => {
   const floor = new THREE.Mesh(floorGeometry, floorMaterial)
   floor.rotation.x = -Math.PI / 2 // 让地板水平
   floor.position.y = 0 // 地板高度（在 y=0 上）
+  floor.receiveShadow = true
   scene.add(floor)
 
   // --- Cannon.js 地板刚体 ---
