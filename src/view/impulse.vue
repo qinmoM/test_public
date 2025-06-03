@@ -98,6 +98,7 @@ const initScene = () => {
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
   directionalLight.position.set(1, 1, 1)
   scene.add(directionalLight)
+  scene.background = new THREE.Color( 0xadd8e6 )
 
   // 6. 创建物理世界
   const groundMaterial = new CANNON.Material('ground')

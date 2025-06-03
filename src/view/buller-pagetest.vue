@@ -294,7 +294,7 @@ onMounted(() => {
   
   // 初始化场景
   scene = new THREE.Scene()
-  scene.background = new THREE.Color(0xf0f0f0)
+  scene.background = new THREE.Color( 0xadd8e6 )
   
   camera = new THREE.PerspectiveCamera(60, dom.clientWidth / dom.clientHeight, 0.1, 1000)
   camera.position.set(-8, 3, 8)
