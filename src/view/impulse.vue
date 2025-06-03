@@ -547,6 +547,10 @@ onBeforeUnmount(() => {
   font-size: 15px;
 }
 
+.data-display h3 {
+  color: black;
+}
+
 .data-display p {
   color: black;
   margin: 4px 0;
