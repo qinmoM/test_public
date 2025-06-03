@@ -1,6 +1,6 @@
 <template>
     <div class="layout-header">
-
+        冲量模拟系统
     </div>
     <div class="layout-content">
         <div class="nav">
@@ -26,7 +26,16 @@ import router from '../../router';
     padding: 0;
     width: 100%;
     height: 50px;
+    letter-spacing: 10px;
     background-color: #f0f0f0;
+    text-align: center;
+    line-height: 50px;
+    font-size: 25px;
+    box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.2);
+    text-shadow: 
+    1px 1px 0 #ccc,
+    2px 2px 0 #bbb,
+    5px 5px 5px rgba(0,0,0,0.6);
 }
 .layout-content{
     display: flex;
