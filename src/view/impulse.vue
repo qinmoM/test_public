@@ -6,13 +6,25 @@
     <div class="control-group">
       <h2>反冲模型</h2>
       <div class="control-item">
-        <label>子弹速度：</label>
-        <input type="number" v-model.number="inputVelocity" min="1" max="500">
-        <button @click="fire">开火</button>
-        <button @click="resetCamera">重置模型</button>
+        <div style="display: flex;flex-direction: column;width: 100%;">
+          <h3>控制面板</h3>
+          <label>子弹速度：</label>
+          <input type="number" v-model.number="inputVelocity" min="1" max="500">
+          <label>子弹的质量：</label>
+          <input type="number" v-model.number="bulletMass" min="0.001" max="1" step="0.001">
+          <label>枪的质量：</label>
+          <input type="number" v-model.number="weaponMass" min="1" max="20" step="0.1">
+          <label>子弹出趟的水平偏移角度</label>
+          <input type="number" v-model.number="bulletAngle" min="-45" max="45" step="1">
+          <label>子弹出趟的垂直偏移角度</label>
+          <input type="number" v-model.number="bulletVerticalAngle" min="-45" max="45" step="1">
+          <div style="margin-top: 10px;">
+            <button @click="fire">开火</button>
+            <button @click="resetCamera">重置模型</button>
+          </div>
+        </div>
       </div>
     </div>
-
     <div class="data-display">
       <h3>冲量数据</h3>
       <p>子弹速度: {{ bulletSpeed.toFixed(2) }} m/s</p>
@@ -330,25 +342,18 @@ const recoilAnimation = (onComplete) => {
   const duration = 200
   const distance = 0.2
   let startTime = null
-
+  //绘制枪沿x轴后坐力
   const animate = (timestamp) => {
     if (!startTime) startTime = timestamp
     const elapsed = timestamp - startTime
     const progress = Math.min(elapsed / duration, 1)
-    
-    // 使用缓动函数
-    const ease = progress < 0.5 
-      ? 2 * progress * progress 
-      : 1 - Math.pow(-2 * progress + 2, 2) / 2
-    
-    weapon.position.z = progress < 0.5 
-      ? ease * distance 
-      : distance - (ease - 0.5) * 2 * distance
 
+    weapon.position.x = 2 + distance // 恢复到原始位置
     if (progress < 1) {
       animationId.value = requestAnimationFrame(animate)
     } else {
-      weapon.position.z = 0
+      weapon.position.x = 2
+      // weapon.rotation.x = 0 // 恢复到原始位置
       onComplete?.()
     }
   }

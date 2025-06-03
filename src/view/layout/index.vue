@@ -4,8 +4,7 @@
     </div>
     <div class="layout-content">
         <div class="nav">
-            <RouterLink to="/page1" class="nav-items">示例</RouterLink>
-            <RouterLink to='/page2' class="nav-items">弹性碰撞</RouterLink>
+            <RouterLink to='/' class="nav-items">弹性碰撞</RouterLink>
             <RouterLink to="/page3" class="nav-items">动量守恒--牛顿摆</RouterLink>
             <RouterLink to="/buller-pagetest" class="nav-items">冲量1--子弹射击木块</RouterLink>
             <RouterLink to="/page4" class="nav-items">冲量2--反冲</RouterLink>
