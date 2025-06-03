@@ -63,6 +63,11 @@ onMounted(() => {
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(dom.clientWidth, dom.clientHeight);
     dom.appendChild(renderer.domElement);
+    renderer = new THREE.WebGLRenderer({ 
+    antialias: true // 开启抗锯齿
+});
+renderer.physicallyCorrectLights = true; // 物理正确光照
+renderer.outputEncoding = THREE.sRGBEncoding; // sRGB编码
 
     setupScene();
     setupPhysics();
@@ -85,6 +90,24 @@ function setupScene() {
     cube.position.copy(boxBody?.position || new THREE.Vector3(0, 0, 0));
     scene.add(cube);
 
+// 添加环境光和方向光
+    const ambientLight = new THREE.AmbientLight(0x404040, 2); // 柔和的环境光
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(1, 1, 1).normalize();
+    scene.add(directionalLight);
+    
+    // 可选：添加环境贴图增强金属反射效果
+    new THREE.CubeTextureLoader()
+        .load([
+            '/path/to/px.jpg', '/path/to/nx.jpg',
+            '/path/to/py.jpg', '/path/to/ny.jpg',
+            '/path/to/pz.jpg', '/path/to/nz.jpg'
+        ], (texture) => {
+            scene.background = texture;
+            scene.environment = texture; // 重要：这是金属反射的关键
+            });
     // Axes helper
     const axesHelper = new THREE.AxesHelper(5);
     scene.add(axesHelper);
@@ -178,10 +201,15 @@ function createPhyCicle(sphereMaterial, radius, mass, position, v0 = 0) {
 
 function createBasicCircle(radius, position) {
     const geometry = new THREE.SphereGeometry(radius, 32, 32);
-    const textureUrl = new URL('../assets/textures/terrazzo_tiles_diff_4k.jpg', import.meta.url).href;
-    const material = new THREE.MeshBasicMaterial({ 
-        map: new THREE.TextureLoader().load(textureUrl) 
+    
+    // 使用 MeshStandardMaterial 并设置为金属材质
+    const material = new THREE.MeshStandardMaterial({
+        color: 0xffffff, // 纯白色
+        metalness: 0.55, // 金属度设为 0.55 (Metal 055)
+        roughness: 0.3,  // 粗糙度设为 0.3 使表面更光滑
+        envMapIntensity: 1 // 环境贴图强度
     });
+    
     const sphere = new THREE.Mesh(geometry, material);
     sphere.position.set(position.x, position.y, position.z);
     return sphere;
