@@ -483,6 +483,10 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid #eee;
 }
 
+.control-group h2 {
+  color: #333;
+}
+
 .control-group h3 {
   margin: 0 0 10px 0;
   font-size: 16px;
@@ -496,6 +500,7 @@ onBeforeUnmount(() => {
 }
 
 .control-item label {
+  color: black;
   min-width: 80px;
   margin-right: 10px;
   font-weight: 500;
@@ -538,6 +543,7 @@ onBeforeUnmount(() => {
 }
 
 .data-display p {
+  color: black;
   margin: 4px 0;
   font-size: 13px;
 }

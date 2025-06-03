@@ -484,6 +484,7 @@ html, body, #app {
 }
 
 .control-item label {
+  color: black;
   min-width: 80px;
   margin-right: 10px;
   font-weight: 500;
@@ -522,11 +523,13 @@ html, body, #app {
 }
 
 .data-display h3 {
+  color: black;
   margin: 0 0 8px 0;
   font-size: 15px;
 }
 
 .data-display p {
+  color: black;
   margin: 4px 0;
   font-size: 13px;
 }

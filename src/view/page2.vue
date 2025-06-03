@@ -281,6 +281,7 @@ canvas {
 }
 
 .control-group label {
+  color: black;
   display: inline-block;
   width: 120px;
   margin-right: 10px;
@@ -292,6 +293,7 @@ canvas {
 }
 
 .control-group span {
+  color: black;
   display: inline-block;
   width: 40px;
   text-align: right;
